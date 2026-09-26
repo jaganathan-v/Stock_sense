@@ -10,7 +10,6 @@
   <!-- Chart.js via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Lucide Icons via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 
   <style>
     .pulse-dot {
@@ -166,10 +165,10 @@
   window.downloadReport = async function () {
     const btn = document.getElementById("download-report");
     btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" style="animation:spin 1s linear infinite"></i> Generating…`;
+      btn.innerHTML = `<i data-lucide="loader-2" style="animation:spin 1s linear infinite"></i> Generating…`;
     renderLucide();
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("stocksense_token");
       const res = await fetch(api.inventoryPdfUrl, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -178,7 +177,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `stocksense-inventory-${new Date().toISOString().slice(0,10)}.pdf`;
+      a.download = `stocksense-inventory-report-${new Date().toISOString().slice(0,10)}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
       showToast("PDF downloaded!", "success");
