@@ -77,4 +77,5 @@ export const api = {
 
   // Dashboard
   getDashboard: () => request("GET", "/dashboard"),
+  inventoryPdfUrl: `${BASE}/reports/inventory-pdf`,
 };

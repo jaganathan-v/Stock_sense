@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 import pathlib
 
 from backend.database import init_db
-from backend.routers import products, moves, dashboard
+from backend.routers import products, moves, dashboard, reports
 
 # ─── App setup ───────────────────────────────────────────────────────────────
 
@@ -48,6 +48,7 @@ def startup_event():
 app.include_router(products.router)
 app.include_router(moves.router)
 app.include_router(dashboard.router)
+app.include_router(reports.router)
 
 
 # ─── Serve frontend static files ─────────────────────────────────────────────

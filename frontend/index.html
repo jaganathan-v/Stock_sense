@@ -139,6 +139,7 @@
         <a href="products.html" class="btn btn-primary"><i data-lucide="plus"></i> Add Product</a>
         <a href="receipt.html"  class="btn btn-success"><i data-lucide="arrow-down-left"></i> Receive Stock</a>
         <a href="delivery.html" class="btn btn-danger"><i data-lucide="arrow-up-right"></i> Ship Stock</a>
+        <a href="#" id="download-report" class="btn btn-outline"><i data-lucide="file-down"></i> Download PDF Report</a>
         <a href="history.html"  class="btn btn-outline"><i data-lucide="history"></i> View Ledger History</a>
       </div>
     </div>
@@ -161,6 +162,7 @@
   initNavToggle();
   initAuthHeader();
   renderLucide();
+  document.getElementById("download-report").href = api.inventoryPdfUrl;
 
   let chartInstance = null;
 
