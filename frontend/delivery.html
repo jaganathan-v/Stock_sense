@@ -62,7 +62,16 @@
               <span class="field-error" id="product-err"></span>
             </div>
 
-            <!-- Live stock gauge -->
+            <!-- Source Location Dropdown -->
+            <div class="form-group full">
+              <label for="location">Source Location *</label>
+              <select id="location">
+                <option value="">— Loading locations… —</option>
+              </select>
+              <span class="field-error" id="location-err"></span>
+            </div>
+
+            <!-- Live stock gauge for selected location -->
             <div class="form-group full" id="stock-preview-wrap" style="display:none">
               <div id="stock-bar-container" style="margin-bottom:.5rem">
                 <div class="flex items-center justify-between" style="margin-bottom:.3rem">
@@ -104,12 +113,12 @@
         <div class="card">
           <div class="card-title">
             <i data-lucide="shield-check"></i>
-            <span>Stock Balance Validation</span>
+            <span>Location Stock Validation</span>
           </div>
-          <p>The backend will <strong>strictly reject</strong> any delivery where requested quantity exceeds the computed stock. The check sums all previous ledger rows in real-time.</p>
+          <p>The backend will <strong>strictly reject</strong> any delivery where requested quantity exceeds the available stock at the selected location.</p>
           <div class="alert alert-warn mt-2" style="margin-bottom:0">
             <i data-lucide="alert-triangle" class="alert-icon"></i>
-            <span>Attempting to ship more than available triggers a 422 error and preserves ledger integrity.</span>
+            <span>Attempting to ship more than available at that location triggers a 422 error and preserves ledger integrity.</span>
           </div>
         </div>
 
@@ -148,6 +157,7 @@
 
   const form          = document.getElementById("delivery-form");
   const productSel    = document.getElementById("product");
+  const locationSel   = document.getElementById("location");
   const qtyEl         = document.getElementById("quantity");
   const noteEl        = document.getElementById("note");
   const alertEl       = document.getElementById("form-alert");
@@ -161,6 +171,7 @@
   const recentList    = document.getElementById("recent-list");
 
   let products = [];
+  let locations = [];
 
   // ── Load products ──
   async function loadProducts() {
@@ -170,6 +181,19 @@
     } catch (e) {
       productSel.innerHTML = `<option value="">Failed to load products</option>`;
       showToast("Could not load products: " + e.message, "error");
+    }
+  }
+
+  // ── Load locations ──
+  async function loadLocations() {
+    try {
+      locations = await api.getLocations();
+      locationSel.innerHTML = locations.map(l => `
+        <option value="${l.id}">${l.name}</option>
+      `).join("");
+      updateGauge();
+    } catch (e) {
+      locationSel.innerHTML = `<option value="">Failed to load locations</option>`;
     }
   }
 
@@ -190,6 +214,7 @@
             <div>
               <div class="low-stock-name">${r.product_name || `Product #${r.product_id}`}</div>
               <div class="low-stock-sku" style="display:flex;align-items:center;gap:.3rem;margin-top:2px">
+                <i data-lucide="map-pin" class="badge-icon"></i> ${r.location_name || "Main Warehouse"} •
                 <i data-lucide="clock" class="badge-icon"></i> ${formatDateTime(r.timestamp)}
                 ${r.note ? `• ${r.note}` : ""}
               </div>
@@ -214,10 +239,12 @@
   }
 
   loadProducts();
+  loadLocations();
   loadRecentDeliveries();
 
-  // ── Stock gauge on product change ──
+  // ── Stock gauge on product/location change ──
   productSel.addEventListener("change", updateGauge);
+  locationSel.addEventListener("change", updateGauge);
   qtyEl.addEventListener("input", updateRemainingPreview);
 
   function selectedProduct() {
@@ -225,22 +252,34 @@
     return products.find(p => p.id === id);
   }
 
+  function getAvailableStock() {
+    const p = selectedProduct();
+    if (!p) return 0;
+    const locOpt = locationSel.selectedOptions[0];
+    const locName = locOpt ? locOpt.textContent.trim() : "";
+    return (p.location_stocks && p.location_stocks[locName]) ?? 0;
+  }
+
   function updateGauge() {
     const p = selectedProduct();
-    if (!p) { previewWrap.style.display = "none"; remainingWrap.style.display = "none"; return; }
+    const locOpt = locationSel.selectedOptions[0];
+    if (!p || !locOpt) { previewWrap.style.display = "none"; remainingWrap.style.display = "none"; return; }
+
+    const locName = locOpt.textContent.trim();
+    const stock = getAvailableStock();
 
     previewWrap.style.display = "block";
-    stockLabel.textContent = `Available Balance: ${p.current_stock} ${p.unit_of_measure}`;
-    stockValue.textContent = p.current_stock;
-    stockValue.className = p.current_stock === 0 ? "badge badge-red"
-                         : p.current_stock < 10  ? "badge badge-orange"
-                                                 : "badge badge-green";
+    stockLabel.textContent = `Available at ${locName}: ${stock} ${p.unit_of_measure}`;
+    stockValue.textContent = stock;
+    stockValue.className = stock === 0 ? "badge badge-red"
+                         : stock < 10  ? "badge badge-orange"
+                                       : "badge badge-green";
 
-    const pct = Math.min((p.current_stock / 200) * 100, 100);
+    const pct = Math.min((stock / 100) * 100, 100);
     stockBar.style.width = `${pct}%`;
-    stockBar.style.background = p.current_stock === 0 ? "var(--danger)"
-                                : p.current_stock < 10  ? "var(--warning)"
-                                                        : "var(--success)";
+    stockBar.style.background = stock === 0 ? "var(--danger)"
+                                : stock < 10  ? "var(--warning)"
+                                              : "var(--success)";
     updateRemainingPreview();
     renderLucide();
   }
@@ -250,25 +289,29 @@
     const qty = parseInt(qtyEl.value, 10);
     if (!p || isNaN(qty) || qty <= 0) { remainingWrap.style.display = "none"; return; }
 
+    const locOpt = locationSel.selectedOptions[0];
+    const locName = locOpt ? locOpt.textContent.trim() : "location";
+    const available = getAvailableStock();
+    const remaining = available - qty;
+
     remainingWrap.style.display = "block";
-    const remaining = p.current_stock - qty;
     if (remaining < 0) {
       remainingAlert.className = "alert alert-error";
       remainingAlert.innerHTML = `
         <i data-lucide="alert-octagon" class="alert-icon"></i>
-        <span>Shortfall of <strong>${Math.abs(remaining)} ${p.unit_of_measure}</strong> — delivery exceeds ledger balance.</span>
+        <span>Shortfall of <strong>${Math.abs(remaining)} ${p.unit_of_measure}</strong> at ${locName} — delivery exceeds location stock.</span>
       `;
     } else if (remaining < 10) {
       remainingAlert.className = "alert alert-warn";
       remainingAlert.innerHTML = `
         <i data-lucide="alert-triangle" class="alert-icon"></i>
-        <span>After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining (low-stock warning).</span>
+        <span>After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining at ${locName} (low-stock warning).</span>
       `;
     } else {
       remainingAlert.className = "alert alert-success";
       remainingAlert.innerHTML = `
         <i data-lucide="check-circle" class="alert-icon"></i>
-        <span>Sufficient stock. After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining.</span>
+        <span>Sufficient stock. After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining at ${locName}.</span>
       `;
     }
     renderLucide();
@@ -279,20 +322,27 @@
     e.preventDefault();
     hideAlert(alertEl);
 
-    const ok1 = validateRequired(productSel, document.getElementById("product-err"));
-    const ok2 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
-    if (!ok1 || !ok2) return;
+    const ok1 = validateRequired(productSel,  document.getElementById("product-err"));
+    const ok2 = validateRequired(locationSel, document.getElementById("location-err"));
+    const ok3 = validatePositiveInt(qtyEl,    document.getElementById("qty-err"));
+    if (!ok1 || !ok2 || !ok3) return;
 
     setLoading(submitBtn, true);
     try {
-      const productId = parseInt(productSel.value, 10);
-      const quantity  = parseInt(qtyEl.value, 10);
-      const note      = noteEl.value.trim();
+      const productId  = parseInt(productSel.value, 10);
+      const locationId = parseInt(locationSel.value, 10);
+      const quantity   = parseInt(qtyEl.value, 10);
+      const note       = noteEl.value.trim();
 
-      const move = await api.delivery({ product_id: productId, quantity, note });
+      const move = await api.delivery({
+        product_id: productId,
+        location_id: locationId,
+        quantity,
+        note
+      });
       const pName = move.product_name || "Product";
 
-      showToast(`Shipped ${quantity} units of ${pName}`, "success");
+      showToast(`Shipped ${quantity} units of ${pName} from ${move.location_name}`, "success");
       form.reset();
       previewWrap.style.display = "none";
       remainingWrap.style.display = "none";

@@ -34,6 +34,9 @@ public class StockMoveResponseDto {
 
     private String note;
 
+    @JsonProperty("supplier_name")
+    private String supplierName;
+
     @JsonProperty("unit_of_measure")
     private String unitOfMeasure;
 
@@ -42,7 +45,8 @@ public class StockMoveResponseDto {
 
     public StockMoveResponseDto(Long id, Long productId, String productName, String productSku,
                                 Long locationId, String locationName, Integer quantityChange,
-                                String moveType, LocalDateTime timestamp, String note, String unitOfMeasure) {
+                                String moveType, LocalDateTime timestamp, String note,
+                                String supplierName, String unitOfMeasure) {
         this.id = id;
         this.productId = productId;
         this.productName = productName;
@@ -53,6 +57,7 @@ public class StockMoveResponseDto {
         this.moveType = moveType;
         this.timestamp = timestamp;
         this.note = note;
+        this.supplierName = supplierName;
         this.unitOfMeasure = unitOfMeasure;
     }
 
@@ -134,6 +139,14 @@ public class StockMoveResponseDto {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
     }
 
     public String getUnitOfMeasure() {

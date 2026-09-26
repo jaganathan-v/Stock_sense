@@ -43,8 +43,12 @@ export const api = {
   getMe:  ()       => request("GET",  "/auth/me"),
 
   // Products
-  getProducts: ()          => request("GET",  "/products"),
-  createProduct: (body)    => request("POST", "/products", body),
+  getProducts: ()          => request("GET",    "/products"),
+  createProduct: (body)    => request("POST",   "/products", body),
+  deleteProduct: (id)      => request("DELETE", `/products/${id}`),
+
+  // Locations
+  getLocations: ()         => request("GET",    "/locations"),
 
   // Moves
   receipt:  (body) => request("POST", "/moves/receipt",  body),

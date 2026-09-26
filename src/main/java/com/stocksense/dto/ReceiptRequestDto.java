@@ -11,6 +11,9 @@ public class ReceiptRequestDto {
     @JsonProperty("product_id")
     private Long productId;
 
+    @JsonProperty("location_id")
+    private Long locationId;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be a positive integer greater than zero")
     private Integer quantity;
@@ -18,13 +21,23 @@ public class ReceiptRequestDto {
     @Size(max = 255, message = "Note cannot exceed 255 characters")
     private String note;
 
+    @JsonProperty("supplier_name")
+    @Size(max = 120, message = "Supplier name cannot exceed 120 characters")
+    private String supplierName;
+
     public ReceiptRequestDto() {
     }
 
     public ReceiptRequestDto(Long productId, Integer quantity, String note) {
+        this(productId, null, quantity, note, null);
+    }
+
+    public ReceiptRequestDto(Long productId, Long locationId, Integer quantity, String note, String supplierName) {
         this.productId = productId;
+        this.locationId = locationId;
         this.quantity = quantity;
         this.note = note;
+        this.supplierName = supplierName;
     }
 
     public Long getProductId() {
@@ -33,6 +46,14 @@ public class ReceiptRequestDto {
 
     public void setProductId(Long productId) {
         this.productId = productId;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 
     public Integer getQuantity() {
@@ -49,5 +70,13 @@ public class ReceiptRequestDto {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
     }
 }

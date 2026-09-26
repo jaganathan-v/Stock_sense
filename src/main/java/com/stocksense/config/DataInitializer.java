@@ -8,8 +8,8 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * DataInitializer runs on startup and seeds the default Location ("Main Warehouse")
- * if it does not already exist.
+ * DataInitializer runs on startup and seeds the default Locations
+ * ("Main Warehouse" and "Production Floor") if they do not already exist.
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -24,10 +24,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (locationRepository.count() == 0) {
-            Location mainWarehouse = new Location("Main Warehouse");
-            locationRepository.save(mainWarehouse);
-            log.info("Seeded default location: 'Main Warehouse' (id={})", mainWarehouse.getId());
+        seedLocationIfMissing("Main Warehouse");
+        seedLocationIfMissing("Production Floor");
+    }
+
+    private void seedLocationIfMissing(String name) {
+        if (!locationRepository.existsByNameIgnoreCase(name)) {
+            Location loc = locationRepository.save(new Location(name));
+            log.info("Seeded location: '{}' (id={})", name, loc.getId());
         }
     }
 }

@@ -9,6 +9,55 @@
   <link rel="stylesheet" href="style.css" />
   <!-- Lucide Icons via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+  <style>
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: all .2s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,.2);
+      transform: scale(0.95);
+      transition: transform .2s ease;
+    }
+    .modal-overlay.active .modal-box {
+      transform: scale(1);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .modal-header h3 {
+      font-size: 1.15rem;
+      margin: 0;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+  </style>
 </head>
 <body>
 <div class="page-wrapper">
@@ -39,7 +88,7 @@
       <div class="header-icon"><i data-lucide="boxes"></i></div>
       <div>
         <h1>Products</h1>
-        <p>Manage product catalog. Current stock balances are dynamically derived from the transaction ledger.</p>
+        <p>Manage product catalog. Stock levels are calculated by summing the ledger and broken down by location.</p>
       </div>
     </div>
 
@@ -91,12 +140,12 @@
       <div class="card" style="align-self:start;">
         <div class="card-title">
           <i data-lucide="info"></i>
-          <span>Ledger Stock Pattern</span>
+          <span>Multi-Location Ledger Rules</span>
         </div>
-        <p style="margin-bottom:.8rem;">StockSense uses an <strong>append-only ledger</strong>. The Product table contains no stock field. Every inbound or outbound event is recorded in the ledger — balance is calculated on demand.</p>
+        <p style="margin-bottom:.8rem;">StockSense maintains an <strong>immutable audit trail</strong>. Products that have existing ledger entries cannot be deleted to guarantee historical audit integrity.</p>
         <div class="alert alert-info" style="margin-bottom:0">
-          <i data-lucide="lightbulb" class="alert-icon"></i>
-          <span>After adding a product, head to <a href="receipt.html" style="color:var(--accent-dark);font-weight:600">Stock Receipt</a> to register incoming inventory.</span>
+          <i data-lucide="map-pin" class="alert-icon"></i>
+          <span>Stock is tracked independently at <strong>Main Warehouse</strong> and <strong>Production Floor</strong>.</span>
         </div>
       </div>
     </div>
@@ -106,7 +155,7 @@
       <div class="flex items-center justify-between mb-2">
         <div class="card-title" style="margin-bottom:0">
           <i data-lucide="list"></i>
-          <span>Product Catalogue</span>
+          <span>Product Catalogue &amp; Stock by Location</span>
         </div>
         <button class="btn btn-outline" id="refresh-btn" onclick="loadProducts()">
           <i data-lucide="refresh-cw"></i>
@@ -123,6 +172,35 @@
   <footer>
     <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
   </footer>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div style="background:rgba(239,68,68,.12);color:var(--danger);width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <i data-lucide="alert-triangle"></i>
+      </div>
+      <div>
+        <h3>Delete Product</h3>
+        <p style="margin:0;font-size:.82rem">This action cannot be undone</p>
+      </div>
+    </div>
+    <p id="delete-modal-msg" style="font-size:.92rem;line-height:1.5;color:var(--text)">
+      Are you sure you want to delete this product?
+    </p>
+    <div class="alert alert-warn mt-2" style="font-size:.82rem;margin-bottom:0">
+      <i data-lucide="shield-alert" class="alert-icon"></i>
+      <span>Products with ledger transactions cannot be deleted to preserve audit trails.</span>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modal-cancel-btn">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm-btn">
+        <i data-lucide="trash-2"></i>
+        <span>Confirm Delete</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -142,6 +220,47 @@
   const alert      = document.getElementById("form-alert");
   const submitBtn  = document.getElementById("submit-btn");
   const tableEl    = document.getElementById("table-container");
+
+  // Modal elements
+  const deleteModal = document.getElementById("delete-modal");
+  const deleteMsg   = document.getElementById("delete-modal-msg");
+  const cancelBtn   = document.getElementById("modal-cancel-btn");
+  const confirmBtn  = document.getElementById("modal-confirm-btn");
+  let productToDelete = null;
+
+  function openDeleteModal(id, name) {
+    productToDelete = { id, name };
+    deleteMsg.innerHTML = `Are you sure you want to delete <strong>${name}</strong>?`;
+    deleteModal.classList.add("active");
+    renderLucide();
+  }
+
+  function closeDeleteModal() {
+    deleteModal.classList.remove("active");
+    productToDelete = null;
+  }
+
+  cancelBtn.addEventListener("click", closeDeleteModal);
+  deleteModal.addEventListener("click", (e) => {
+    if (e.target === deleteModal) closeDeleteModal();
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    if (!productToDelete) return;
+    setLoading(confirmBtn, true);
+    try {
+      await api.deleteProduct(productToDelete.id);
+      showToast(`Product "${productToDelete.name}" deleted successfully`, "success");
+      closeDeleteModal();
+      loadProducts();
+    } catch (err) {
+      showToast(err.message, "error");
+      closeDeleteModal();
+    } finally {
+      setLoading(confirmBtn, false);
+      renderLucide();
+    }
+  });
 
   // ── Load Products ──
   window.loadProducts = async function () {
@@ -165,12 +284,13 @@
           <table>
             <thead>
               <tr>
-                <th style="width:60px">#</th>
-                <th>Name</th>
+                <th style="width:50px">#</th>
+                <th>Product</th>
                 <th>SKU</th>
                 <th>Category</th>
-                <th>UOM</th>
-                <th style="text-align:right">Current Stock</th>
+                <th style="min-width:200px">Stock by Location</th>
+                <th style="width:130px;text-align:right">Total Stock</th>
+                <th style="width:80px;text-align:center">Action</th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -180,15 +300,49 @@
       const tbody = document.getElementById("tbody");
       products.forEach((p, i) => {
         const tr = document.createElement("tr");
+
+        // Format location breakdown
+        const locEntries = Object.entries(p.location_stocks || {});
+        let locHtml = "";
+        if (locEntries.length === 0) {
+          locHtml = `<span class="text-muted" style="font-size:.82rem">0 ${p.unit_of_measure} (no movements)</span>`;
+        } else {
+          locHtml = locEntries.map(([locName, qty]) => {
+            const dotColor = qty > 0 ? "var(--success)" : "var(--muted)";
+            return `
+              <div style="font-size:.82rem;margin-bottom:3px;display:flex;align-items:center;gap:.4rem">
+                <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColor}"></span>
+                <span style="color:var(--text);font-weight:500">${locName}:</span>
+                <strong style="color:var(--text)">${qty}</strong>
+                <span class="text-muted">${p.unit_of_measure}</span>
+              </div>
+            `;
+          }).join("");
+        }
+
         tr.innerHTML = `
           <td class="text-muted">${i + 1}</td>
           <td><strong>${p.name}</strong></td>
           <td><code style="background:#F3F4FF;color:var(--accent-dark);padding:.15rem .4rem;border-radius:4px;font-size:.83rem">${p.sku}</code></td>
           <td>${p.category}</td>
-          <td>${p.unit_of_measure}</td>
-          <td style="text-align:right">${stockBadge(p.current_stock)}</td>`;
+          <td>${locHtml}</td>
+          <td style="text-align:right">${stockBadge(p.current_stock)}</td>
+          <td style="text-align:center">
+            <button class="btn btn-outline btn-delete" data-id="${p.id}" data-name="${p.name}" style="padding:.3rem .55rem;border-color:var(--border);color:var(--danger)" title="Delete product">
+              <i data-lucide="trash-2" class="badge-icon"></i>
+            </button>
+          </td>
+        `;
         tbody.appendChild(tr);
       });
+
+      // Bind delete button clicks
+      document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", () => {
+          openDeleteModal(btn.dataset.id, btn.dataset.name);
+        });
+      });
+
       renderLucide();
     } catch (e) {
       tableEl.innerHTML = `

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "stock_moves", indexes = {
     @Index(name = "idx_stock_moves_product_id", columnList = "product_id"),
+    @Index(name = "idx_stock_moves_location_id", columnList = "location_id"),
     @Index(name = "idx_stock_moves_timestamp", columnList = "timestamp")
 })
 public class StockMove {
@@ -35,16 +36,24 @@ public class StockMove {
     @Column(length = 255)
     private String note;
 
+    @Column(name = "supplier_name", length = 120)
+    private String supplierName;
+
     public StockMove() {
         this.timestamp = LocalDateTime.now();
     }
 
     public StockMove(Product product, Location location, Integer quantityChange, MoveType moveType, String note) {
+        this(product, location, quantityChange, moveType, note, null);
+    }
+
+    public StockMove(Product product, Location location, Integer quantityChange, MoveType moveType, String note, String supplierName) {
         this.product = product;
         this.location = location;
         this.quantityChange = quantityChange;
         this.moveType = moveType;
         this.note = note;
+        this.supplierName = supplierName;
         this.timestamp = LocalDateTime.now();
     }
 
@@ -102,5 +111,13 @@ public class StockMove {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public void setSupplierName(String supplierName) {
+        this.supplierName = supplierName;
     }
 }

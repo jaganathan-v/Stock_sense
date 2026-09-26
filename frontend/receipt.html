@@ -62,6 +62,15 @@
               <span class="field-error" id="product-err"></span>
             </div>
 
+            <!-- Destination Location -->
+            <div class="form-group full">
+              <label for="location">Destination Location *</label>
+              <select id="location">
+                <option value="">— Loading locations… —</option>
+              </select>
+              <span class="field-error" id="location-err"></span>
+            </div>
+
             <!-- Live stock preview -->
             <div class="form-group full" id="stock-preview-wrap" style="display:none">
               <div class="alert alert-info" id="stock-preview" style="margin-bottom:0"></div>
@@ -73,9 +82,15 @@
               <span class="field-error" id="qty-err"></span>
             </div>
 
+            <!-- Supplier Name (Phase 4) -->
             <div class="form-group full">
-              <label for="note">Note (optional)</label>
-              <input type="text" id="note" placeholder="e.g. PO-2026-001, Supplier Batch A" maxlength="255" />
+              <label for="supplier">Supplier Name (optional)</label>
+              <input type="text" id="supplier" placeholder="e.g. Global Tech Components Ltd." maxlength="120" />
+            </div>
+
+            <div class="form-group full">
+              <label for="note">Note / Reference (optional)</label>
+              <input type="text" id="note" placeholder="e.g. PO-2026-001, Batch A" maxlength="255" />
             </div>
           </div>
 
@@ -96,8 +111,8 @@
           <p>When you record a receipt:</p>
           <ol style="margin:.8rem 0 0 1.2rem;line-height:1.9;font-size:.9rem;color:var(--muted)">
             <li>A <strong>StockMove</strong> record is appended with a positive quantity change.</li>
+            <li>Stored with designated warehouse location and supplier reference.</li>
             <li>Computed stock is recalculated immediately via ledger summation.</li>
-            <li>No editable stock number is ever stored on the Product.</li>
           </ol>
         </div>
 
@@ -136,7 +151,9 @@
 
   const form        = document.getElementById("receipt-form");
   const productSel  = document.getElementById("product");
+  const locationSel = document.getElementById("location");
   const qtyEl       = document.getElementById("quantity");
+  const supplierEl  = document.getElementById("supplier");
   const noteEl      = document.getElementById("note");
   const alertEl     = document.getElementById("form-alert");
   const submitBtn   = document.getElementById("submit-btn");
@@ -155,6 +172,18 @@
     }
   }
 
+  // ── Load locations into select ──
+  async function loadLocations() {
+    try {
+      const locations = await api.getLocations();
+      locationSel.innerHTML = locations.map(l => `
+        <option value="${l.id}">${l.name}</option>
+      `).join("");
+    } catch (e) {
+      locationSel.innerHTML = `<option value="">Failed to load locations</option>`;
+    }
+  }
+
   // ── Load real database receipts ──
   async function loadRecentReceipts() {
     try {
@@ -170,8 +199,12 @@
         recentList.innerHTML = recent.map(r => `
           <div class="low-stock-item" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.04);margin-bottom:.65rem">
             <div>
-              <div class="low-stock-name">${r.product_name || `Product #${r.product_id}`}</div>
+              <div class="low-stock-name">
+                ${r.product_name || `Product #${r.product_id}`}
+                ${r.supplier_name ? `<span class="badge badge-blue" style="margin-left:.4rem;font-size:.72rem"><i data-lucide="truck" class="badge-icon"></i> ${r.supplier_name}</span>` : ""}
+              </div>
               <div class="low-stock-sku" style="display:flex;align-items:center;gap:.3rem;margin-top:2px">
+                <i data-lucide="map-pin" class="badge-icon"></i> ${r.location_name || "Main Warehouse"} •
                 <i data-lucide="clock" class="badge-icon"></i> ${formatDateTime(r.timestamp)}
                 ${r.note ? `• ${r.note}` : ""}
               </div>
@@ -196,6 +229,7 @@
   }
 
   loadProducts();
+  loadLocations();
   loadRecentReceipts();
 
   // ── Show current stock when product is selected ──
@@ -205,7 +239,7 @@
     const stock = parseInt(opt.dataset.stock, 10);
     const uom   = opt.dataset.uom;
     previewWrap.style.display = "block";
-    previewEl.innerHTML = `<i data-lucide="layers" class="alert-icon"></i><span>Current ledger balance: <strong>${stock} ${uom}</strong></span>`;
+    previewEl.innerHTML = `<i data-lucide="layers" class="alert-icon"></i><span>Current total ledger balance: <strong>${stock} ${uom}</strong></span>`;
     renderLucide();
   });
 
@@ -215,23 +249,32 @@
     hideAlert(alertEl);
 
     const ok1 = validateRequired(productSel, document.getElementById("product-err"));
-    const ok2 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
-    if (!ok1 || !ok2) return;
+    const ok2 = validateRequired(locationSel, document.getElementById("location-err"));
+    const ok3 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
+    if (!ok1 || !ok2 || !ok3) return;
 
     setLoading(submitBtn, true);
     try {
-      const productId = parseInt(productSel.value, 10);
-      const quantity  = parseInt(qtyEl.value, 10);
-      const note      = noteEl.value.trim();
+      const productId    = parseInt(productSel.value, 10);
+      const locationId   = parseInt(locationSel.value, 10);
+      const quantity     = parseInt(qtyEl.value, 10);
+      const supplierName = supplierEl.value.trim() || null;
+      const note         = noteEl.value.trim();
 
-      const move = await api.receipt({ product_id: productId, quantity, note });
+      const move = await api.receipt({
+        product_id: productId,
+        location_id: locationId,
+        quantity,
+        supplier_name: supplierName,
+        note
+      });
       const pName = move.product_name || "Product";
 
-      showToast(`Received ${quantity} units for ${pName}`, "success");
+      showToast(`Received ${quantity} units for ${pName} at ${move.location_name}`, "success");
       form.reset();
       previewWrap.style.display = "none";
 
-      // Refresh both products dropdown and real database recent list
+      // Refresh both products dropdown, locations, and real database recent list
       await Promise.all([loadProducts(), loadRecentReceipts()]);
     } catch (err) {
       showAlert(alertEl, err.message, "error");

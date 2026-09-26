@@ -11,6 +11,9 @@ public class DeliveryRequestDto {
     @JsonProperty("product_id")
     private Long productId;
 
+    @JsonProperty("location_id")
+    private Long locationId;
+
     @NotNull(message = "Quantity is required")
     @Min(value = 1, message = "Quantity must be a positive integer greater than zero")
     private Integer quantity;
@@ -22,7 +25,12 @@ public class DeliveryRequestDto {
     }
 
     public DeliveryRequestDto(Long productId, Integer quantity, String note) {
+        this(productId, null, quantity, note);
+    }
+
+    public DeliveryRequestDto(Long productId, Long locationId, Integer quantity, String note) {
         this.productId = productId;
+        this.locationId = locationId;
         this.quantity = quantity;
         this.note = note;
     }
@@ -33,6 +41,14 @@ public class DeliveryRequestDto {
 
     public void setProductId(Long productId) {
         this.productId = productId;
+    }
+
+    public Long getLocationId() {
+        return locationId;
+    }
+
+    public void setLocationId(Long locationId) {
+        this.locationId = locationId;
     }
 
     public Integer getQuantity() {

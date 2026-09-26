@@ -35,18 +35,24 @@ public class StockMoveService {
     }
 
     /**
-     * Records a stock receipt: creates an immutable positive StockMove entry.
+     * Records a stock receipt: creates an immutable positive StockMove entry,
+     * associating location and optional supplier name.
      */
     public StockMoveResponseDto recordReceipt(ReceiptRequestDto dto) {
         Product product = productService.getProductEntity(dto.getProductId());
-        Location location = getDefaultLocation();
+        Location location = resolveLocation(dto.getLocationId());
+
+        String supplierName = (dto.getSupplierName() != null && !dto.getSupplierName().isBlank())
+                ? dto.getSupplierName().trim()
+                : null;
 
         StockMove move = new StockMove(
                 product,
                 location,
                 dto.getQuantity(), // Positive quantity change
                 MoveType.RECEIPT,
-                (dto.getNote() != null && !dto.getNote().isBlank()) ? dto.getNote().trim() : "Stock receipt"
+                (dto.getNote() != null && !dto.getNote().isBlank()) ? dto.getNote().trim() : "Stock receipt",
+                supplierName
         );
 
         StockMove saved = stockMoveRepository.save(move);
@@ -54,29 +60,30 @@ public class StockMoveService {
     }
 
     /**
-     * Records a stock delivery: validates sufficient stock exists first,
+     * Records a stock delivery: validates sufficient stock exists at the specified location first,
      * then creates an immutable negative StockMove entry.
      */
     public StockMoveResponseDto recordDelivery(DeliveryRequestDto dto) {
         Product product = productService.getProductEntity(dto.getProductId());
-        int currentStock = productService.computeCurrentStock(product.getId());
+        Location location = resolveLocation(dto.getLocationId());
 
-        if (dto.getQuantity() > currentStock) {
+        int availableAtLocation = stockMoveRepository.computeStockByProductAndLocation(product.getId(), location.getId());
+
+        if (dto.getQuantity() > availableAtLocation) {
             throw new InsufficientStockException(
-                    "Insufficient stock for '" + product.getName() + "'. " +
-                    "Available: " + currentStock + " " + product.getUnitOfMeasure() + ", " +
+                    "Insufficient stock for '" + product.getName() + "' at '" + location.getName() + "'. " +
+                    "Available: " + availableAtLocation + " " + product.getUnitOfMeasure() + ", " +
                     "Requested: " + dto.getQuantity() + " " + product.getUnitOfMeasure() + "."
             );
         }
-
-        Location location = getDefaultLocation();
 
         StockMove move = new StockMove(
                 product,
                 location,
                 -dto.getQuantity(), // Negative quantity change
                 MoveType.DELIVERY,
-                (dto.getNote() != null && !dto.getNote().isBlank()) ? dto.getNote().trim() : "Stock delivery"
+                (dto.getNote() != null && !dto.getNote().isBlank()) ? dto.getNote().trim() : "Stock delivery",
+                null
         );
 
         StockMove saved = stockMoveRepository.save(move);
@@ -118,8 +125,17 @@ public class StockMoveService {
                 move.getMoveType().getValue(),
                 move.getTimestamp(),
                 move.getNote(),
+                move.getSupplierName(),
                 move.getProduct().getUnitOfMeasure()
         );
+    }
+
+    private Location resolveLocation(Long locationId) {
+        if (locationId != null) {
+            return locationRepository.findById(locationId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Location not found with id: " + locationId));
+        }
+        return getDefaultLocation();
     }
 
     private Location getDefaultLocation() {

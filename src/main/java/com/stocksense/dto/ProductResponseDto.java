@@ -1,6 +1,8 @@
 package com.stocksense.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ProductResponseDto {
 
@@ -15,6 +17,9 @@ public class ProductResponseDto {
     @JsonProperty("current_stock")
     private Integer currentStock;
 
+    @JsonProperty("location_stocks")
+    private Map<String, Integer> locationStocks = new LinkedHashMap<>();
+
     public ProductResponseDto() {
     }
 
@@ -25,6 +30,17 @@ public class ProductResponseDto {
         this.category = category;
         this.unitOfMeasure = unitOfMeasure;
         this.currentStock = currentStock != null ? currentStock : 0;
+        this.locationStocks = new LinkedHashMap<>();
+    }
+
+    public ProductResponseDto(Long id, String name, String sku, String category, String unitOfMeasure, Integer currentStock, Map<String, Integer> locationStocks) {
+        this.id = id;
+        this.name = name;
+        this.sku = sku;
+        this.category = category;
+        this.unitOfMeasure = unitOfMeasure;
+        this.currentStock = currentStock != null ? currentStock : 0;
+        this.locationStocks = locationStocks != null ? locationStocks : new LinkedHashMap<>();
     }
 
     public Long getId() {
@@ -73,5 +89,13 @@ public class ProductResponseDto {
 
     public void setCurrentStock(Integer currentStock) {
         this.currentStock = currentStock;
+    }
+
+    public Map<String, Integer> getLocationStocks() {
+        return locationStocks;
+    }
+
+    public void setLocationStocks(Map<String, Integer> locationStocks) {
+        this.locationStocks = locationStocks;
     }
 }
