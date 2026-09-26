@@ -1,6 +1,8 @@
 package com.stocksense.service;
 
 import com.stocksense.dto.DeliveryRequestDto;
+import com.stocksense.dto.TransferRequestDto;
+import com.stocksense.dto.AdjustmentRequestDto;
 import com.stocksense.dto.ReceiptRequestDto;
 import com.stocksense.dto.StockMoveResponseDto;
 import com.stocksense.exception.InsufficientStockException;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,6 +91,35 @@ public class StockMoveService {
 
         StockMove saved = stockMoveRepository.save(move);
         return mapToDto(saved);
+    }
+
+    public List<StockMoveResponseDto> recordTransfer(TransferRequestDto dto) {
+        Product product = productService.getProductEntity(dto.getProductId());
+        Location source = resolveLocation(dto.getSourceLocationId());
+        Location destination = resolveLocation(dto.getDestinationLocationId());
+        if (source.getId().equals(destination.getId())) {
+            throw new IllegalArgumentException("Source and destination locations must be different.");
+        }
+        int available = stockMoveRepository.computeStockByProductAndLocation(product.getId(), source.getId());
+        if (dto.getQuantity() > available) {
+            throw new InsufficientStockException("Insufficient stock for '" + product.getName() + "' at '" + source.getName() + "'. Available: " + available + ", requested: " + dto.getQuantity() + ".");
+        }
+        String transferRef = UUID.randomUUID().toString();
+        StockMove out = new StockMove(product, source, -dto.getQuantity(), MoveType.TRANSFER,
+                "Transfer " + transferRef + " to " + destination.getName());
+        StockMove in = new StockMove(product, destination, dto.getQuantity(), MoveType.TRANSFER,
+                "Transfer " + transferRef + " from " + source.getName());
+        return List.of(mapToDto(stockMoveRepository.save(out)), mapToDto(stockMoveRepository.save(in)));
+    }
+
+    public StockMoveResponseDto recordAdjustment(AdjustmentRequestDto dto) {
+        Product product = productService.getProductEntity(dto.getProductId());
+        Location location = resolveLocation(dto.getLocationId());
+        int current = stockMoveRepository.computeStockByProductAndLocation(product.getId(), location.getId());
+        int difference = dto.getCountedQuantity() - current;
+        StockMove move = new StockMove(product, location, difference, MoveType.ADJUSTMENT,
+                "Stock count adjustment (counted " + dto.getCountedQuantity() + ", was " + current + ")");
+        return mapToDto(stockMoveRepository.save(move));
     }
 
     @Transactional(readOnly = true)

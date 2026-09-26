@@ -53,6 +53,8 @@ export const api = {
   // Moves
   receipt:  (body) => request("POST", "/moves/receipt",  body),
   delivery: (body) => request("POST", "/moves/delivery", body),
+  transfer: (body) => request("POST", "/moves/transfer", body),
+  adjustment: (body) => request("POST", "/moves/adjustment", body),
 
   // Recent & All Moves
   getRecentMoves: (params = {}) => {

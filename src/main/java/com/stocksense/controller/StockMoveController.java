@@ -1,6 +1,8 @@
 package com.stocksense.controller;
 
 import com.stocksense.dto.DeliveryRequestDto;
+import com.stocksense.dto.TransferRequestDto;
+import com.stocksense.dto.AdjustmentRequestDto;
 import com.stocksense.dto.ReceiptRequestDto;
 import com.stocksense.dto.StockMoveResponseDto;
 import com.stocksense.service.StockMoveService;
@@ -32,6 +34,16 @@ public class StockMoveController {
     public ResponseEntity<StockMoveResponseDto> recordDelivery(@Valid @RequestBody DeliveryRequestDto dto) {
         StockMoveResponseDto move = stockMoveService.recordDelivery(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(move);
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<List<StockMoveResponseDto>> recordTransfer(@Valid @RequestBody TransferRequestDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(stockMoveService.recordTransfer(dto));
+    }
+
+    @PostMapping("/adjustment")
+    public ResponseEntity<StockMoveResponseDto> recordAdjustment(@Valid @RequestBody AdjustmentRequestDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(stockMoveService.recordAdjustment(dto));
     }
 
     @GetMapping("/recent")
