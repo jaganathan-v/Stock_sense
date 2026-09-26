@@ -27,29 +27,15 @@ export function logout() {
 }
 
 export function initAuthHeader() {
-  const navInner = document.querySelector(".nav-inner");
-  if (!navInner) return;
+  const profileArea = document.getElementById("sidebar-profile");
+  if (!profileArea) return;
 
   const email = localStorage.getItem("stocksense_email") || "user";
-  let userArea = document.getElementById("nav-user-area");
-  if (!userArea) {
-    userArea = document.createElement("div");
-    userArea.id = "nav-user-area";
-    userArea.className = "nav-user-area";
-    navInner.appendChild(userArea);
-  }
-
-  userArea.innerHTML = `
-    <span class="user-badge" title="${email}">
-      <i data-lucide="user" class="badge-icon"></i>
-      <span class="user-email-text">${email}</span>
-    </span>
-    <button class="btn btn-outline btn-logout" id="logout-btn" title="Log out">
-      <i data-lucide="log-out" class="badge-icon"></i>
-      <span>Logout</span>
-    </button>
+  profileArea.innerHTML = `
+    <a class="sidebar-link" href="profile.html" title="My Profile"><i data-lucide="user-round"></i><span class="nav-label">My Profile</span></a>
+    <div class="sidebar-user" title="${email}"><i data-lucide="circle-user-round"></i><span class="nav-label">${email}</span></div>
+    <button class="sidebar-link sidebar-logout" id="logout-btn" title="Logout"><i data-lucide="log-out"></i><span class="nav-label">Logout</span></button>
   `;
-
   document.getElementById("logout-btn")?.addEventListener("click", logout);
   renderLucide();
 }
@@ -181,19 +167,50 @@ export function formatDateTime(isoString) {
 /* ── Mark active nav link ────────────────────────────────── */
 export function markActiveNav() {
   const path = window.location.pathname.split("/").pop() || "index.html";
-  document.querySelectorAll(".nav-links a").forEach(a => {
+  document.querySelectorAll(".sidebar-nav a").forEach(a => {
     const href = a.getAttribute("href").split("/").pop();
-    if (href === path) a.classList.add("active");
+    if (href === path) {
+      a.classList.add("active");
+      a.closest("details")?.setAttribute("open", "");
+    }
   });
 }
 
 /* ── Mobile hamburger toggle ─────────────────────────────── */
 export function initNavToggle() {
-  const btn   = document.getElementById("nav-toggle");
-  const links = document.getElementById("nav-links");
-  if (btn && links) {
-    btn.addEventListener("click", () => links.classList.toggle("open"));
-  }
+  const navbar = document.querySelector(".navbar");
+  if (!navbar) return;
+  navbar.innerHTML = `
+    <div class="sidebar-top">
+      <a class="nav-brand" href="index.html" title="StockSense"><div class="logo-icon"><i data-lucide="package"></i></div><span class="nav-label">Stock<em>Sense</em></span></a>
+      <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Collapse sidebar" title="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
+    </div>
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <a class="sidebar-link" href="index.html" title="Dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span></a>
+      <a class="sidebar-link" href="products.html" title="Products"><i data-lucide="boxes"></i><span class="nav-label">Products</span></a>
+      <details class="sidebar-operations" id="operations-menu">
+        <summary class="sidebar-link" title="Operations"><i data-lucide="workflow"></i><span class="nav-label">Operations</span><i data-lucide="chevron-down" class="ops-chevron"></i></summary>
+        <div class="sidebar-subnav">
+          <a class="sidebar-link" href="receipt.html" title="Receipts"><i data-lucide="arrow-down-to-dot"></i><span class="nav-label">Receipts</span></a>
+          <a class="sidebar-link" href="delivery.html" title="Deliveries"><i data-lucide="arrow-up-from-dot"></i><span class="nav-label">Deliveries</span></a>
+          <a class="sidebar-link" href="transfer.html" title="Transfers"><i data-lucide="arrow-left-right"></i><span class="nav-label">Transfers</span></a>
+          <a class="sidebar-link" href="adjustment.html" title="Adjustments"><i data-lucide="sliders"></i><span class="nav-label">Adjustments</span></a>
+          <a class="sidebar-link" href="history.html" title="Move History"><i data-lucide="history"></i><span class="nav-label">Move History</span></a>
+          <a class="sidebar-link" href="pending.html" title="Pending Approvals"><i data-lucide="clipboard-check"></i><span class="nav-label">Pending Approvals</span></a>
+        </div>
+      </details>
+      <a class="sidebar-link" href="settings.html" title="Settings · Warehouse management"><i data-lucide="settings-2"></i><span class="nav-label">Settings</span></a>
+    </nav>
+    <div class="sidebar-profile" id="sidebar-profile"></div>`;
+  const wasCollapsed = localStorage.getItem("stocksense_sidebar_collapsed") === "true";
+  document.body.classList.toggle("sidebar-collapsed", wasCollapsed);
+  document.getElementById("sidebar-toggle")?.addEventListener("click", () => {
+    const collapsed = document.body.classList.toggle("sidebar-collapsed");
+    localStorage.setItem("stocksense_sidebar_collapsed", String(collapsed));
+    renderLucide();
+  });
+  markActiveNav();
+  renderLucide();
 }
 
 /* ── Basic form validation helpers ──────────────────────── */

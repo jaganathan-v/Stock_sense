@@ -49,6 +49,10 @@ export const api = {
 
   // Locations
   getLocations: ()         => request("GET",    "/locations"),
+  createLocation: (body)   => request("POST",   "/locations", body),
+  renameLocation: (id, body) => request("PATCH", `/locations/${id}`, body),
+  deleteLocation: (id)     => request("DELETE", `/locations/${id}`),
+  getCurrentUser: ()       => request("GET", "/auth/me"),
 
   // Moves
   receipt:  (body) => request("POST", "/moves/receipt",  body),

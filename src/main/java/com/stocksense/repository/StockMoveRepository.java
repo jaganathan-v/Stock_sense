@@ -55,4 +55,6 @@ public interface StockMoveRepository extends JpaRepository<StockMove, Long> {
     boolean existsByProductId(Long productId);
 
     long countByProductId(Long productId);
+
+    boolean existsByLocationId(Long locationId);
 }
