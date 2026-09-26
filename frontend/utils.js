@@ -1,6 +1,6 @@
 /**
  * utils.js — Shared UI helpers used across all pages.
- * Fully integrated with Lucide icons (no emojis).
+ * Fully integrated with Lucide icons (no emojis) and Auth Guards.
  */
 
 /* ── Lucide Icon Re-initialization ───────────────────────── */
@@ -8,6 +8,50 @@ export function renderLucide() {
   if (typeof window !== "undefined" && window.lucide && typeof window.lucide.createIcons === "function") {
     window.lucide.createIcons();
   }
+}
+
+/* ── Authentication Guards & User session ───────────────── */
+export function requireAuth() {
+  const token = localStorage.getItem("stocksense_token");
+  if (!token) {
+    window.location.href = "login.html";
+    return false;
+  }
+  return true;
+}
+
+export function logout() {
+  localStorage.removeItem("stocksense_token");
+  localStorage.removeItem("stocksense_email");
+  window.location.href = "login.html";
+}
+
+export function initAuthHeader() {
+  const navInner = document.querySelector(".nav-inner");
+  if (!navInner) return;
+
+  const email = localStorage.getItem("stocksense_email") || "user";
+  let userArea = document.getElementById("nav-user-area");
+  if (!userArea) {
+    userArea = document.createElement("div");
+    userArea.id = "nav-user-area";
+    userArea.className = "nav-user-area";
+    navInner.appendChild(userArea);
+  }
+
+  userArea.innerHTML = `
+    <span class="user-badge" title="${email}">
+      <i data-lucide="user" class="badge-icon"></i>
+      <span class="user-email-text">${email}</span>
+    </span>
+    <button class="btn btn-outline btn-logout" id="logout-btn" title="Log out">
+      <i data-lucide="log-out" class="badge-icon"></i>
+      <span>Logout</span>
+    </button>
+  `;
+
+  document.getElementById("logout-btn")?.addEventListener("click", logout);
+  renderLucide();
 }
 
 /* ── Toast notification ──────────────────────────────────── */

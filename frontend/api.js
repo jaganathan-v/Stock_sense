@@ -1,21 +1,35 @@
 /**
  * api.js — Centralised API client for StockSense frontend.
- * Seamlessly connects to Spring Boot backend (port 8080).
+ * Seamlessly connects to Spring Boot backend (port 8080) with JWT Auth.
  */
 
 const BASE = (typeof window !== "undefined" && window.location.origin && window.location.origin.startsWith("http"))
   ? (window.location.port === "8080" ? window.location.origin : "http://localhost:8080")
   : "http://localhost:8080";
 
-const headers = () => ({ "Content-Type": "application/json" });
+function getHeaders() {
+  const h = { "Content-Type": "application/json" };
+  const token = localStorage.getItem("stocksense_token");
+  if (token) {
+    h["Authorization"] = `Bearer ${token}`;
+  }
+  return h;
+}
 
 async function request(method, path, body = null) {
-  const opts = { method, headers: headers() };
+  const opts = { method, headers: getHeaders() };
   if (body !== null) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE}${path}`, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // surface the backend's detail message when available
+    // If unauthorized, clear invalid token and redirect if not already on auth page
+    if (res.status === 401 && !path.startsWith("/auth/login") && !path.startsWith("/auth/signup")) {
+      localStorage.removeItem("stocksense_token");
+      localStorage.removeItem("stocksense_email");
+      if (!window.location.pathname.endsWith("login.html") && !window.location.pathname.endsWith("signup.html")) {
+        window.location.href = "login.html";
+      }
+    }
     const msg = data?.detail ?? data?.message ?? `HTTP ${res.status}: ${res.statusText}`;
     throw new Error(msg);
   }
@@ -23,6 +37,11 @@ async function request(method, path, body = null) {
 }
 
 export const api = {
+  // Auth
+  signup: (body)   => request("POST", "/auth/signup", body),
+  login:  (body)   => request("POST", "/auth/login",  body),
+  getMe:  ()       => request("GET",  "/auth/me"),
+
   // Products
   getProducts: ()          => request("GET",  "/products"),
   createProduct: (body)    => request("POST", "/products", body),

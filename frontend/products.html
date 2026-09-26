@@ -130,10 +130,12 @@
 
 <script type="module">
   import { api } from "./api.js";
-  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, stockBadge, validateRequired, renderLucide } from "./utils.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, stockBadge, validateRequired, renderLucide, requireAuth, initAuthHeader } from "./utils.js";
 
+  if (!requireAuth()) throw new Error("Authentication required");
   markActiveNav();
   initNavToggle();
+  initAuthHeader();
   renderLucide();
 
   const form       = document.getElementById("product-form");

@@ -32,6 +32,7 @@ class StockSenseIntegrationTests {
     private ObjectMapper objectMapper;
 
     private static Long createdProductId;
+    private static String jwtToken;
 
     @Test
     @Order(1)
@@ -212,5 +213,90 @@ class StockSenseIntegrationTests {
                 .andExpect(jsonPath("$.length()").value(greaterThanOrEqualTo(3)))
                 .andExpect(jsonPath("$[0].timestamp").exists())
                 .andExpect(jsonPath("$[0].quantity_change").exists());
+    }
+
+    @Test
+    @Order(11)
+    void testAuthSignupSuccess() throws Exception {
+        String json = """
+                {
+                    "email": "warehouse.manager@stocksense.io",
+                    "password": "securepassword123"
+                }
+                """;
+
+        MvcResult result = mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.email").value("warehouse.manager@stocksense.io"))
+                .andExpect(jsonPath("$.user_id").exists())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        jwtToken = root.get("token").asText();
+        assertThat(jwtToken).isNotBlank();
+    }
+
+    @Test
+    @Order(12)
+    void testAuthSignupDuplicateEmail() throws Exception {
+        String json = """
+                {
+                    "email": "warehouse.manager@stocksense.io",
+                    "password": "anotherpassword"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("An account with email 'warehouse.manager@stocksense.io' already exists."));
+    }
+
+    @Test
+    @Order(13)
+    void testAuthLoginSuccess() throws Exception {
+        String json = """
+                {
+                    "email": "warehouse.manager@stocksense.io",
+                    "password": "securepassword123"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.email").value("warehouse.manager@stocksense.io"));
+    }
+
+    @Test
+    @Order(14)
+    void testAuthLoginInvalidPassword() throws Exception {
+        String json = """
+                {
+                    "email": "warehouse.manager@stocksense.io",
+                    "password": "wrongpassword"
+                }
+                """;
+
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("Invalid email or password."));
+    }
+
+    @Test
+    @Order(15)
+    void testAuthGetCurrentUser() throws Exception {
+        mockMvc.perform(get("/auth/me")
+                        .header("Authorization", "Bearer " + jwtToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("warehouse.manager@stocksense.io"));
     }
 }

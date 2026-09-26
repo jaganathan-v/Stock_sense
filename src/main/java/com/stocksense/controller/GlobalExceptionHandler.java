@@ -23,6 +23,13 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponseDto(ex.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY.value()));
     }
 
+    @ExceptionHandler(com.stocksense.exception.UnauthorizedException.class)
+    public ResponseEntity<ErrorResponseDto> handleUnauthorized(com.stocksense.exception.UnauthorizedException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponseDto(ex.getMessage(), HttpStatus.UNAUTHORIZED.value()));
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponseDto> handleConflict(ConflictException ex) {
         return ResponseEntity
