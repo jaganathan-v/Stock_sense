@@ -66,9 +66,11 @@
         <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
         <li><a href="transfer.html"><i data-lucide="arrow-left-right"></i> Transfer</a></li>
         <li><a href="adjustment.html"><i data-lucide="sliders"></i> Adjustment</a></li>
+        <li><a href="pending.html"><i data-lucide="clipboard-check"></i> Pending Approvals</a></li>
         <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
       </ul>
     </div>
+
   </nav>
 
   <!-- ── Content ── -->
@@ -124,6 +126,12 @@
           <div class="stat-label">Record a Delivery</div>
         </div>
       </div>
+      <a class="stat-card" href="pending.html" style="text-decoration:none;color:inherit">
+        <div class="stat-icon green"><i data-lucide="arrow-down-left"></i></div><div><div class="stat-value" id="stat-pending-receipts">0</div><div class="stat-label">Pending Receipts</div></div>
+      </a>
+      <a class="stat-card" href="pending.html" style="text-decoration:none;color:inherit">
+        <div class="stat-icon orange"><i data-lucide="arrow-up-right"></i></div><div><div class="stat-value" id="stat-pending-deliveries">0</div><div class="stat-label">Pending Deliveries</div></div>
+      </a>
     </div>
 
     <!-- Low-stock & Stock Bar Chart -->
@@ -204,6 +212,8 @@
       // Stats
       document.getElementById("stat-total").textContent = dash.total_products;
       document.getElementById("stat-low").textContent   = dash.low_stock_items.length;
+      document.getElementById("stat-pending-receipts").textContent = dash.pending_receipts ?? 0;
+      document.getElementById("stat-pending-deliveries").textContent = dash.pending_deliveries ?? 0;
       document.getElementById("last-refresh").textContent =
         `Last refreshed: ${new Date().toLocaleTimeString()}`;
 

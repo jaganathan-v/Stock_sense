@@ -100,6 +100,9 @@
             <i data-lucide="arrow-down-left"></i>
             <span>Record Receipt</span>
           </button>
+          <button type="submit" class="btn btn-outline mt-2 w-full" id="draft-btn" formnovalidate>
+            <i data-lucide="save"></i><span>Save as Draft</span>
+          </button>
         </form>
       </div>
 
@@ -255,7 +258,8 @@
     const ok3 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
     if (!ok1 || !ok2 || !ok3) return;
 
-    setLoading(submitBtn, true);
+    const actionBtn = e.submitter || submitBtn;
+    setLoading(actionBtn, true);
     try {
       const productId    = parseInt(productSel.value, 10);
       const locationId   = parseInt(locationSel.value, 10);
@@ -263,16 +267,18 @@
       const supplierName = supplierEl.value.trim() || null;
       const note         = noteEl.value.trim();
 
-      const move = await api.receipt({
+      const payload = {
         product_id: productId,
         location_id: locationId,
         quantity,
         supplier_name: supplierName,
         note
-      });
+      };
+      const isDraft = actionBtn.id === "draft-btn";
+      const move = await (isDraft ? api.receiptDraft(payload) : api.receipt(payload));
       const pName = move.product_name || "Product";
 
-      showToast(`Received ${quantity} units for ${pName} at ${move.location_name}`, "success");
+      showToast(isDraft ? `Saved receipt for ${quantity} units of ${pName} as a draft.` : `Received ${quantity} units for ${pName} at ${move.location_name}`, "success");
       form.reset();
       previewWrap.style.display = "none";
 
@@ -281,7 +287,7 @@
     } catch (err) {
       showAlert(alertEl, err.message, "error");
     } finally {
-      setLoading(submitBtn, false);
+      setLoading(actionBtn, false);
       renderLucide();
     }
   });

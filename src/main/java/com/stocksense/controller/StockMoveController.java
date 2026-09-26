@@ -36,6 +36,32 @@ public class StockMoveController {
         return ResponseEntity.status(HttpStatus.CREATED).body(move);
     }
 
+    @PostMapping("/receipt/draft")
+    public ResponseEntity<StockMoveResponseDto> saveReceiptDraft(@Valid @RequestBody ReceiptRequestDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(stockMoveService.saveReceiptDraft(dto));
+    }
+
+    @PostMapping("/delivery/draft")
+    public ResponseEntity<StockMoveResponseDto> saveDeliveryDraft(@Valid @RequestBody DeliveryRequestDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(stockMoveService.saveDeliveryDraft(dto));
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<List<StockMoveResponseDto>> getPendingMoves() {
+        return ResponseEntity.ok(stockMoveService.getPendingMoves());
+    }
+
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<StockMoveResponseDto> confirmDraft(@PathVariable Long id) {
+        return ResponseEntity.ok(stockMoveService.confirmDraft(id));
+    }
+
+    @DeleteMapping("/{id}/draft")
+    public ResponseEntity<Void> discardDraft(@PathVariable Long id) {
+        stockMoveService.discardDraft(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/transfer")
     public ResponseEntity<List<StockMoveResponseDto>> recordTransfer(@Valid @RequestBody TransferRequestDto dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(stockMoveService.recordTransfer(dto));

@@ -9,6 +9,7 @@ import com.stocksense.exception.InsufficientStockException;
 import com.stocksense.exception.ResourceNotFoundException;
 import com.stocksense.model.Location;
 import com.stocksense.model.MoveType;
+import com.stocksense.model.MoveStatus;
 import com.stocksense.model.Product;
 import com.stocksense.model.StockMove;
 import com.stocksense.repository.LocationRepository;
@@ -62,6 +63,16 @@ public class StockMoveService {
         return mapToDto(saved);
     }
 
+    public StockMoveResponseDto saveReceiptDraft(ReceiptRequestDto dto) {
+        Product product = productService.getProductEntity(dto.getProductId());
+        Location location = resolveLocation(dto.getLocationId());
+        String supplierName = dto.getSupplierName() != null && !dto.getSupplierName().isBlank() ? dto.getSupplierName().trim() : null;
+        StockMove move = new StockMove(product, location, dto.getQuantity(), MoveType.RECEIPT,
+                dto.getNote() != null && !dto.getNote().isBlank() ? dto.getNote().trim() : "Stock receipt", supplierName);
+        move.setStatus(MoveStatus.DRAFT);
+        return mapToDto(stockMoveRepository.save(move));
+    }
+
     /**
      * Records a stock delivery: validates sufficient stock exists at the specified location first,
      * then creates an immutable negative StockMove entry.
@@ -91,6 +102,42 @@ public class StockMoveService {
 
         StockMove saved = stockMoveRepository.save(move);
         return mapToDto(saved);
+    }
+
+    public StockMoveResponseDto saveDeliveryDraft(DeliveryRequestDto dto) {
+        Product product = productService.getProductEntity(dto.getProductId());
+        Location location = resolveLocation(dto.getLocationId());
+        StockMove move = new StockMove(product, location, -dto.getQuantity(), MoveType.DELIVERY,
+                dto.getNote() != null && !dto.getNote().isBlank() ? dto.getNote().trim() : "Stock delivery");
+        move.setStatus(MoveStatus.DRAFT);
+        return mapToDto(stockMoveRepository.save(move));
+    }
+
+    public List<StockMoveResponseDto> getPendingMoves() {
+        return stockMoveRepository.findByStatusWithDetails(MoveStatus.DRAFT).stream()
+                .map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    public StockMoveResponseDto confirmDraft(Long moveId) {
+        StockMove move = stockMoveRepository.findById(moveId)
+                .orElseThrow(() -> new ResourceNotFoundException("Stock move not found with id: " + moveId));
+        if (move.getStatus() != MoveStatus.DRAFT) throw new IllegalArgumentException("Only draft moves can be confirmed.");
+        if (move.getMoveType() == MoveType.DELIVERY) {
+            int available = stockMoveRepository.computeStockByProductAndLocation(move.getProduct().getId(), move.getLocation().getId());
+            int requested = Math.abs(move.getQuantityChange());
+            if (requested > available) {
+                throw new InsufficientStockException("Cannot confirm delivery. Available: " + available + ", requested: " + requested + ".");
+            }
+        }
+        move.setStatus(MoveStatus.CONFIRMED);
+        return mapToDto(stockMoveRepository.save(move));
+    }
+
+    public void discardDraft(Long moveId) {
+        StockMove move = stockMoveRepository.findById(moveId)
+                .orElseThrow(() -> new ResourceNotFoundException("Stock move not found with id: " + moveId));
+        if (move.getStatus() != MoveStatus.DRAFT) throw new IllegalArgumentException("Only draft moves can be discarded.");
+        stockMoveRepository.delete(move);
     }
 
     public List<StockMoveResponseDto> recordTransfer(TransferRequestDto dto) {
@@ -146,7 +193,7 @@ public class StockMoveService {
     }
 
     private StockMoveResponseDto mapToDto(StockMove move) {
-        return new StockMoveResponseDto(
+        StockMoveResponseDto dto = new StockMoveResponseDto(
                 move.getId(),
                 move.getProduct().getId(),
                 move.getProduct().getName(),
@@ -160,6 +207,8 @@ public class StockMoveService {
                 move.getSupplierName(),
                 move.getProduct().getUnitOfMeasure()
         );
+        dto.setStatus(move.getStatus().getValue());
+        return dto;
     }
 
     private Location resolveLocation(Long locationId) {

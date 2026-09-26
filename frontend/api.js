@@ -55,6 +55,11 @@ export const api = {
   delivery: (body) => request("POST", "/moves/delivery", body),
   transfer: (body) => request("POST", "/moves/transfer", body),
   adjustment: (body) => request("POST", "/moves/adjustment", body),
+  receiptDraft: (body) => request("POST", "/moves/receipt/draft", body),
+  deliveryDraft: (body) => request("POST", "/moves/delivery/draft", body),
+  getPendingMoves: () => request("GET", "/moves/pending"),
+  confirmMove: (id) => request("POST", `/moves/${id}/confirm`),
+  discardMove: (id) => request("DELETE", `/moves/${id}/draft`),
 
   // Recent & All Moves
   getRecentMoves: (params = {}) => {

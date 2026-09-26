@@ -30,6 +30,10 @@ public class StockMove {
     @Column(name = "move_type", nullable = false, length = 30)
     private MoveType moveType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20, columnDefinition = "varchar(20) default 'CONFIRMED'")
+    private MoveStatus status = MoveStatus.CONFIRMED;
+
     @Column(nullable = false)
     private LocalDateTime timestamp;
 
@@ -96,6 +100,10 @@ public class StockMove {
     public void setMoveType(MoveType moveType) {
         this.moveType = moveType;
     }
+
+    public MoveStatus getStatus() { return status; }
+
+    public void setStatus(MoveStatus status) { this.status = status; }
 
     public LocalDateTime getTimestamp() {
         return timestamp;

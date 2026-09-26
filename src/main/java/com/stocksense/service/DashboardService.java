@@ -3,6 +3,9 @@ package com.stocksense.service;
 import com.stocksense.dto.DashboardResponseDto;
 import com.stocksense.dto.LowStockItemDto;
 import com.stocksense.dto.ProductResponseDto;
+import com.stocksense.model.MoveStatus;
+import com.stocksense.model.MoveType;
+import com.stocksense.repository.StockMoveRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +20,11 @@ public class DashboardService {
     public static final int LOW_STOCK_THRESHOLD = 10;
 
     private final ProductService productService;
+    private final StockMoveRepository stockMoveRepository;
 
-    public DashboardService(ProductService productService) {
+    public DashboardService(ProductService productService, StockMoveRepository stockMoveRepository) {
         this.productService = productService;
+        this.stockMoveRepository = stockMoveRepository;
     }
 
     public DashboardResponseDto getDashboard() {
@@ -37,10 +42,13 @@ public class DashboardService {
                 ))
                 .collect(Collectors.toList());
 
-        return new DashboardResponseDto(
+        DashboardResponseDto response = new DashboardResponseDto(
                 allProducts.size(),
                 LOW_STOCK_THRESHOLD,
                 lowStockItems
         );
+        response.setPendingReceipts(stockMoveRepository.countByStatusAndMoveType(MoveStatus.DRAFT, MoveType.RECEIPT));
+        response.setPendingDeliveries(stockMoveRepository.countByStatusAndMoveType(MoveStatus.DRAFT, MoveType.DELIVERY));
+        return response;
     }
 }

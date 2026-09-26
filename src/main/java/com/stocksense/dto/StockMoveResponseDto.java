@@ -29,6 +29,8 @@ public class StockMoveResponseDto {
     @JsonProperty("move_type")
     private String moveType;
 
+    private String status;
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timestamp;
 
@@ -120,6 +122,10 @@ public class StockMoveResponseDto {
     public String getMoveType() {
         return moveType;
     }
+
+    public String getStatus() { return status; }
+
+    public void setStatus(String status) { this.status = status; }
 
     public void setMoveType(String moveType) {
         this.moveType = moveType;

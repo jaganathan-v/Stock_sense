@@ -15,6 +15,12 @@ public class DashboardResponseDto {
     @JsonProperty("low_stock_items")
     private List<LowStockItemDto> lowStockItems = new ArrayList<>();
 
+    @JsonProperty("pending_receipts")
+    private Long pendingReceipts = 0L;
+
+    @JsonProperty("pending_deliveries")
+    private Long pendingDeliveries = 0L;
+
     public DashboardResponseDto() {
     }
 
@@ -47,4 +53,9 @@ public class DashboardResponseDto {
     public void setLowStockItems(List<LowStockItemDto> lowStockItems) {
         this.lowStockItems = lowStockItems;
     }
+
+    public Long getPendingReceipts() { return pendingReceipts; }
+    public void setPendingReceipts(Long pendingReceipts) { this.pendingReceipts = pendingReceipts; }
+    public Long getPendingDeliveries() { return pendingDeliveries; }
+    public void setPendingDeliveries(Long pendingDeliveries) { this.pendingDeliveries = pendingDeliveries; }
 }

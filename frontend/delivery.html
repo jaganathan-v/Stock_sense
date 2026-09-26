@@ -107,6 +107,9 @@
             <i data-lucide="arrow-up-right"></i>
             <span>Record Delivery</span>
           </button>
+          <button type="submit" class="btn btn-outline mt-2 w-full" id="draft-btn" formnovalidate>
+            <i data-lucide="save"></i><span>Save as Draft</span>
+          </button>
         </form>
       </div>
 
@@ -329,22 +332,25 @@
     const ok3 = validatePositiveInt(qtyEl,    document.getElementById("qty-err"));
     if (!ok1 || !ok2 || !ok3) return;
 
-    setLoading(submitBtn, true);
+    const actionBtn = e.submitter || submitBtn;
+    const isDraft = actionBtn.id === "draft-btn";
+    setLoading(actionBtn, true);
     try {
       const productId  = parseInt(productSel.value, 10);
       const locationId = parseInt(locationSel.value, 10);
       const quantity   = parseInt(qtyEl.value, 10);
       const note       = noteEl.value.trim();
 
-      const move = await api.delivery({
+      const payload = {
         product_id: productId,
         location_id: locationId,
         quantity,
         note
-      });
+      };
+      const move = await (isDraft ? api.deliveryDraft(payload) : api.delivery(payload));
       const pName = move.product_name || "Product";
 
-      showToast(`Shipped ${quantity} units of ${pName} from ${move.location_name}`, "success");
+      showToast(isDraft ? `Saved delivery for ${quantity} units of ${pName} as a draft.` : `Shipped ${quantity} units of ${pName} from ${move.location_name}`, "success");
       form.reset();
       previewWrap.style.display = "none";
       remainingWrap.style.display = "none";
@@ -354,7 +360,7 @@
     } catch (err) {
       showAlert(alertEl, err.message, "error");
     } finally {
-      setLoading(submitBtn, false);
+      setLoading(actionBtn, false);
       renderLucide();
     }
   });
