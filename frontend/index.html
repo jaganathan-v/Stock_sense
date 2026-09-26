@@ -139,7 +139,7 @@
         <a href="products.html" class="btn btn-primary"><i data-lucide="plus"></i> Add Product</a>
         <a href="receipt.html"  class="btn btn-success"><i data-lucide="arrow-down-left"></i> Receive Stock</a>
         <a href="delivery.html" class="btn btn-danger"><i data-lucide="arrow-up-right"></i> Ship Stock</a>
-        <a href="#" id="download-report" class="btn btn-outline"><i data-lucide="file-down"></i> Download PDF Report</a>
+        <button id="download-report" class="btn btn-outline" onclick="downloadReport()"><i data-lucide="file-down"></i> Download PDF Report</button>
         <a href="history.html"  class="btn btn-outline"><i data-lucide="history"></i> View Ledger History</a>
       </div>
     </div>
@@ -162,7 +162,34 @@
   initNavToggle();
   initAuthHeader();
   renderLucide();
-  document.getElementById("download-report").href = api.inventoryPdfUrl;
+
+  window.downloadReport = async function () {
+    const btn = document.getElementById("download-report");
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" style="animation:spin 1s linear infinite"></i> Generating…`;
+    renderLucide();
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(api.inventoryPdfUrl, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `stocksense-inventory-${new Date().toISOString().slice(0,10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("PDF downloaded!", "success");
+    } catch (e) {
+      showToast("PDF download failed: " + e.message, "error");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="file-down"></i> Download PDF Report`;
+      renderLucide();
+    }
+  };
 
   let chartInstance = null;
 
