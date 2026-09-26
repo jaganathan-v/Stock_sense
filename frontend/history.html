@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockSense — Move History & Audit Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Lucide Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <div class="logo-icon"><i data-lucide="package"></i></div>
+        <span>Stock<em>Sense</em></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i data-lucide="menu"></i>
+      </button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a href="products.html"><i data-lucide="boxes"></i> Products</a></li>
+        <li><a href="receipt.html"><i data-lucide="arrow-down-to-dot"></i> Receipt</a></li>
+        <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
+        <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <main class="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-icon"><i data-lucide="history"></i></div>
+      <div>
+        <h1>Audit Ledger &amp; Move History</h1>
+        <p>Immutable append-only transaction ledger. Every stock alteration is recorded and verifiable.</p>
+      </div>
+    </div>
+
+    <!-- Ledger Stats Summary -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue"><i data-lucide="file-text"></i></div>
+        <div>
+          <div class="stat-value" id="kpi-total-moves">—</div>
+          <div class="stat-label">Total Ledger Entries</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i data-lucide="arrow-down-left"></i></div>
+        <div>
+          <div class="stat-value" id="kpi-total-in">—</div>
+          <div class="stat-label">Units Received</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><i data-lucide="arrow-up-right"></i></div>
+        <div>
+          <div class="stat-value" id="kpi-total-out">—</div>
+          <div class="stat-label">Units Shipped</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><i data-lucide="scale"></i></div>
+        <div>
+          <div class="stat-value" id="kpi-net-balance">—</div>
+          <div class="stat-label">Net Ledger Balance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="filter-bar">
+      <div class="filter-pills" id="filter-pills">
+        <button class="filter-pill active" data-type="all">All Moves</button>
+        <button class="filter-pill" data-type="receipt">Receipts</button>
+        <button class="filter-pill" data-type="delivery">Deliveries</button>
+        <button class="filter-pill" data-type="transfer">Transfers</button>
+        <button class="filter-pill" data-type="adjustment">Adjustments</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="search-input-wrap">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="search-input" placeholder="Search product, SKU, note..." />
+        </div>
+        <button class="btn btn-outline" id="refresh-btn" style="padding:.5rem .85rem" title="Refresh Ledger">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Ledger Table Card -->
+    <div class="card">
+      <div class="card-title justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database"></i>
+          <span>StockMove Journal</span>
+        </div>
+        <span class="text-muted" id="records-count" style="font-size:.85rem;font-weight:500">Loading…</span>
+      </div>
+
+      <div id="table-container">
+        <div class="empty-state">
+          <div class="spinner"></div>
+          <p class="mt-1">Loading ledger transactions…</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { api } from "./api.js";
+  import { showToast, markActiveNav, initNavToggle, moveTypeBadge, formatDateTime, renderLucide } from "./utils.js";
+
+  markActiveNav();
+  initNavToggle();
+  renderLucide();
+
+  let allMoves = [];
+  let currentFilter = "all";
+  let searchQuery = "";
+
+  const tableContainer = document.getElementById("table-container");
+  const countEl = document.getElementById("records-count");
+  const searchInput = document.getElementById("search-input");
+  const refreshBtn = document.getElementById("refresh-btn");
+  const filterPills = document.querySelectorAll(".filter-pill");
+
+  async function loadMoves() {
+    try {
+      allMoves = await api.getAllMoves();
+      updateKpis(allMoves);
+      renderTable();
+    } catch (err) {
+      showToast("Could not load move history: " + err.message, "error");
+      tableContainer.innerHTML = `
+        <div class="alert alert-error">
+          <i data-lucide="alert-circle" class="alert-icon"></i>
+          <span>Failed to fetch ledger rows: ${err.message}</span>
+        </div>
+      `;
+      renderLucide();
+    }
+  }
+
+  function updateKpis(moves) {
+    document.getElementById("kpi-total-moves").textContent = moves.length;
+
+    let totalIn = 0;
+    let totalOut = 0;
+
+    moves.forEach(m => {
+      const q = m.quantity_change || 0;
+      if (q > 0) totalIn += q;
+      if (q < 0) totalOut += Math.abs(q);
+    });
+
+    document.getElementById("kpi-total-in").textContent = totalIn.toLocaleString();
+    document.getElementById("kpi-total-out").textContent = totalOut.toLocaleString();
+    const net = totalIn - totalOut;
+    const netEl = document.getElementById("kpi-net-balance");
+    netEl.textContent = (net >= 0 ? "+" : "") + net.toLocaleString();
+    netEl.style.color = net >= 0 ? "var(--success)" : "var(--danger)";
+  }
+
+  function filterMoves() {
+    return allMoves.filter(m => {
+      const matchesType = currentFilter === "all" || (m.move_type || "").toLowerCase() === currentFilter.toLowerCase();
+      if (!matchesType) return false;
+
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      const pName = (m.product_name || "").toLowerCase();
+      const pSku  = (m.product_sku || "").toLowerCase();
+      const loc   = (m.location_name || "").toLowerCase();
+      const note  = (m.note || "").toLowerCase();
+      return pName.includes(q) || pSku.includes(q) || loc.includes(q) || note.includes(q);
+    });
+  }
+
+  function renderTable() {
+    const filtered = filterMoves();
+    countEl.textContent = `Showing ${filtered.length} of ${allMoves.length} entries`;
+
+    if (!filtered.length) {
+      tableContainer.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="inbox"></i></div>
+          <h3>No ledger entries match criteria</h3>
+          <p>${allMoves.length === 0 ? "Start by recording your first receipt or delivery." : "Try adjusting your search or filter."}</p>
+        </div>
+      `;
+      renderLucide();
+      return;
+    }
+
+    tableContainer.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px">ID</th>
+              <th style="width:160px">Timestamp</th>
+              <th>Product</th>
+              <th style="width:130px">Move Type</th>
+              <th style="width:150px">Location</th>
+              <th style="width:140px;text-align:right">Change</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(m => {
+              const isPositive = (m.quantity_change || 0) > 0;
+              const sign = isPositive ? "+" : "";
+              const qtyClass = isPositive ? "qty-positive" : "qty-negative";
+              const qtyIcon = isPositive ? "arrow-down-left" : "arrow-up-right";
+              const uom = m.unit_of_measure ? ` ${m.unit_of_measure}` : "";
+              return `
+                <tr>
+                  <td><code style="color:var(--muted);font-size:.8rem">#${m.id}</code></td>
+                  <td>
+                    <span style="font-size:.84rem;color:var(--text)">
+                      <i data-lucide="clock" class="badge-icon" style="color:var(--muted);margin-right:2px"></i>
+                      ${formatDateTime(m.timestamp)}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>${m.product_name || `Product #${m.product_id}`}</strong>
+                    <div style="margin-top:2px">
+                      <code style="background:#F3F4FF;color:var(--accent-dark);padding:.1rem .35rem;border-radius:4px;font-size:.78rem">
+                        ${m.product_sku || "NO-SKU"}
+                      </code>
+                    </div>
+                  </td>
+                  <td>${moveTypeBadge(m.move_type)}</td>
+                  <td>
+                    <span style="font-size:.88rem;color:var(--muted);display:inline-flex;align-items:center;gap:.3rem">
+                      <i data-lucide="map-pin" class="badge-icon"></i>
+                      ${m.location_name || "Main Warehouse"}
+                    </span>
+                  </td>
+                  <td style="text-align:right">
+                    <span class="${qtyClass}">
+                      <i data-lucide="${qtyIcon}" class="badge-icon"></i>
+                      ${sign}${m.quantity_change}${uom}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="text-muted" style="font-size:.85rem">${m.note ? m.note : "—"}</span>
+                  </td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    renderLucide();
+  }
+
+  // Filter pills click
+  filterPills.forEach(pill => {
+    pill.addEventListener("click", () => {
+      filterPills.forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      currentFilter = pill.dataset.type;
+      renderTable();
+    });
+  });
+
+  // Search input
+  searchInput.addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim();
+    renderTable();
+  });
+
+  // Refresh
+  refreshBtn.addEventListener("click", () => {
+    loadMoves();
+    showToast("Ledger refreshed", "info");
+  });
+
+  loadMoves();
+</script>
+</body>
+</html>

@@ -7,9 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 
   <style>
-    /* ── Extra dashboard-only styles ── */
     .pulse-dot {
       display: inline-block;
       width: 10px;
@@ -36,11 +39,11 @@
       margin-bottom: 1.75rem;
       box-shadow: var(--shadow-md);
     }
-    .welcome-banner h2 { font-size: 1.5rem; margin-bottom: .3rem; color: white; }
+    .welcome-banner h2 { font-size: 1.5rem; margin-bottom: .3rem; color: white; display: flex; align-items: center; gap: .5rem; }
     .welcome-banner p  { color: rgba(255,255,255,.8); font-size: .93rem; }
-    .welcome-banner .banner-icon { font-size: 3.5rem; line-height: 1; }
+    .welcome-banner .banner-icon { line-height: 1; opacity: .85; }
 
-    .refresh-time { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+    .refresh-time { font-size: .78rem; color: rgba(255,255,255,.7); margin-top: .4rem; }
   </style>
 </head>
 <body>
@@ -50,15 +53,18 @@
   <nav class="navbar">
     <div class="nav-inner">
       <a class="nav-brand" href="index.html">
-        <div class="logo-icon">📦</div>
+        <div class="logo-icon"><i data-lucide="package"></i></div>
         <span>Stock<em>Sense</em></span>
       </a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i data-lucide="menu"></i>
+      </button>
       <ul class="nav-links" id="nav-links">
-        <li><a href="index.html">🏠 Dashboard</a></li>
-        <li><a href="products.html">📋 Products</a></li>
-        <li><a href="receipt.html">📥 Receipt</a></li>
-        <li><a href="delivery.html">📤 Delivery</a></li>
+        <li><a href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a href="products.html"><i data-lucide="boxes"></i> Products</a></li>
+        <li><a href="receipt.html"><i data-lucide="arrow-down-to-dot"></i> Receipt</a></li>
+        <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
+        <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
       </ul>
     </div>
   </nav>
@@ -69,93 +75,123 @@
     <!-- Welcome banner -->
     <div class="welcome-banner">
       <div>
-        <h2>Welcome to StockSense 👋</h2>
+        <h2>Welcome to StockSense</h2>
         <p>Your intelligent inventory management hub — powered by an append-only ledger.</p>
         <p class="refresh-time" id="last-refresh"></p>
       </div>
-      <div class="banner-icon">📊</div>
+      <div class="banner-icon">
+        <i data-lucide="activity"></i>
+      </div>
     </div>
 
     <!-- Stat cards -->
     <div class="stats-grid" id="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon blue"><span>📋</span></div>
+        <div class="stat-icon blue"><i data-lucide="boxes"></i></div>
         <div>
           <div class="stat-value" id="stat-total">—</div>
           <div class="stat-label">Total Products</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon red"><span>🚨</span></div>
+        <div class="stat-icon red"><i data-lucide="alert-triangle"></i></div>
         <div>
           <div class="stat-value" id="stat-low">—</div>
           <div class="stat-label">Low Stock Items</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><span>📥</span></div>
+        <div class="stat-icon green"><i data-lucide="arrow-down-left"></i></div>
         <div>
-          <div class="stat-value"><a href="receipt.html" style="color:var(--text);text-decoration:none;font-size:1rem">Receive →</a></div>
+          <div class="stat-value">
+            <a href="receipt.html" style="color:var(--text);text-decoration:none;font-size:1rem;display:inline-flex;align-items:center;gap:.3rem">
+              Receive <i data-lucide="arrow-right" class="badge-icon"></i>
+            </a>
+          </div>
           <div class="stat-label">Record a Receipt</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon orange"><span>📤</span></div>
+        <div class="stat-icon orange"><i data-lucide="arrow-up-right"></i></div>
         <div>
-          <div class="stat-value"><a href="delivery.html" style="color:var(--text);text-decoration:none;font-size:1rem">Ship →</a></div>
+          <div class="stat-value">
+            <a href="delivery.html" style="color:var(--text);text-decoration:none;font-size:1rem;display:inline-flex;align-items:center;gap:.3rem">
+              Ship <i data-lucide="arrow-right" class="badge-icon"></i>
+            </a>
+          </div>
           <div class="stat-label">Record a Delivery</div>
         </div>
       </div>
     </div>
 
-    <!-- Low-stock section -->
+    <!-- Low-stock & Stock Bar Chart -->
     <div class="grid-2">
+      <!-- Low-stock alerts -->
       <div class="card">
-        <div class="card-title">
-          <span class="pulse-dot" id="pulse-dot" style="display:none"></span>
-          🚨 Low-Stock Alerts
-          <span style="margin-left:auto">
-            <button class="btn btn-outline" style="padding:.3rem .75rem;font-size:.82rem" onclick="loadDashboard()">🔄</button>
-          </span>
+        <div class="card-title justify-between">
+          <div class="flex items-center gap-2">
+            <span class="pulse-dot" id="pulse-dot" style="display:none"></span>
+            <i data-lucide="bell-ring"></i>
+            <span>Low-Stock Alerts</span>
+          </div>
+          <button class="btn btn-outline" style="padding:.3rem .7rem;font-size:.82rem" onclick="loadDashboard()" title="Refresh">
+            <i data-lucide="refresh-cw"></i>
+          </button>
         </div>
         <div id="low-stock-content">
           <div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading…</p></div>
         </div>
       </div>
 
-      <!-- All products quick view -->
+      <!-- Chart.js Current Stock Visualisation -->
       <div class="card">
-        <div class="card-title">📦 All Products — Stock Snapshot</div>
-        <div id="all-products-content">
-          <div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading…</p></div>
+        <div class="card-title justify-between">
+          <div class="flex items-center gap-2">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Current Stock per Product</span>
+          </div>
+          <span class="text-muted" style="font-size:.82rem">Real-time ledger sum</span>
+        </div>
+        <div id="chart-wrap">
+          <div class="chart-container">
+            <canvas id="stock-chart"></canvas>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Quick actions -->
     <div class="card mt-3">
-      <div class="card-title">⚡ Quick Actions</div>
+      <div class="card-title">
+        <i data-lucide="zap"></i>
+        <span>Quick Actions</span>
+      </div>
       <div class="flex flex-wrap gap-2">
-        <a href="products.html" class="btn btn-primary">➕ Add Product</a>
-        <a href="receipt.html"  class="btn btn-success">📥 New Receipt</a>
-        <a href="delivery.html" class="btn btn-danger">📤 New Delivery</a>
-        <a href="/api/docs" target="_blank" class="btn btn-outline">🔧 API Docs</a>
+        <a href="products.html" class="btn btn-primary"><i data-lucide="plus"></i> Add Product</a>
+        <a href="receipt.html"  class="btn btn-success"><i data-lucide="arrow-down-left"></i> New Receipt</a>
+        <a href="delivery.html" class="btn btn-danger"><i data-lucide="arrow-up-right"></i> New Delivery</a>
+        <a href="history.html"  class="btn btn-outline"><i data-lucide="history"></i> View Ledger History</a>
       </div>
     </div>
 
   </main>
 
-  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+  <footer>
+    <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
+  </footer>
 </div>
 
 <div id="toast"></div>
 
 <script type="module">
   import { api } from "./api.js";
-  import { showToast, markActiveNav, initNavToggle, stockBadge } from "./utils.js";
+  import { showToast, markActiveNav, initNavToggle, renderLucide } from "./utils.js";
 
   markActiveNav();
   initNavToggle();
+  renderLucide();
+
+  let chartInstance = null;
 
   window.loadDashboard = async function () {
     try {
@@ -174,58 +210,151 @@
       // Low-stock list
       const lsEl = document.getElementById("low-stock-content");
       if (!dash.low_stock_items.length) {
-        lsEl.innerHTML = `<div class="empty-state">
-          <div class="empty-icon">🟢</div>
-          <h3>All Good!</h3>
-          <p>No products below the ${dash.low_stock_threshold}-unit threshold.</p>
-        </div>`;
+        lsEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i data-lucide="check-circle-2" style="color:var(--success)"></i></div>
+            <h3>All Stock Levels Healthy</h3>
+            <p>No products currently below the ${dash.low_stock_threshold}-unit threshold.</p>
+          </div>
+        `;
       } else {
-        lsEl.innerHTML = `<ul class="low-stock-list">
-          ${dash.low_stock_items.map(item => {
-            const cls = item.current_stock === 0 ? "critical" : "low";
-            const badge = item.current_stock === 0
-              ? `<span class="badge badge-red">🚨 Out of Stock</span>`
-              : `<span class="badge badge-orange">⚠️ ${item.current_stock} left</span>`;
-            return `<li class="low-stock-item ${cls}">
-              <div>
-                <div class="low-stock-name">${item.name}</div>
-                <div class="low-stock-sku">SKU: ${item.sku} · ${item.unit_of_measure}</div>
-              </div>
-              ${badge}
-            </li>`;
-          }).join("")}
-        </ul>
-        <p class="text-muted mt-2" style="font-size:.82rem">Threshold: &lt; ${dash.low_stock_threshold} units</p>`;
+        lsEl.innerHTML = `
+          <ul class="low-stock-list">
+            ${dash.low_stock_items.map(item => {
+              const isZero = item.current_stock === 0;
+              const cls = isZero ? "critical" : "low";
+              const badge = isZero
+                ? `<span class="badge badge-red"><i data-lucide="alert-octagon" class="badge-icon"></i> Out of Stock</span>`
+                : `<span class="badge badge-orange"><i data-lucide="alert-triangle" class="badge-icon"></i> ${item.current_stock} left</span>`;
+              return `
+                <li class="low-stock-item ${cls}">
+                  <div>
+                    <div class="low-stock-name">${item.name}</div>
+                    <div class="low-stock-sku">SKU: ${item.sku} • ${item.unit_of_measure}</div>
+                  </div>
+                  ${badge}
+                </li>
+              `;
+            }).join("")}
+          </ul>
+          <p class="text-muted mt-2" style="font-size:.82rem">Alert threshold: &lt; ${dash.low_stock_threshold} units</p>
+        `;
       }
 
-      // All products snapshot
-      const apEl = document.getElementById("all-products-content");
-      if (!products.length) {
-        apEl.innerHTML = `<div class="empty-state">
-          <div class="empty-icon">📋</div>
-          <h3>No products yet</h3>
-          <p><a href="products.html" style="color:var(--accent)">Add your first product →</a></p>
-        </div>`;
-      } else {
-        apEl.innerHTML = `<div class="table-wrapper">
-          <table>
-            <thead><tr><th>Product</th><th>SKU</th><th>Stock</th></tr></thead>
-            <tbody>${products.map(p => `
-              <tr>
-                <td><strong>${p.name}</strong><br><small class="text-muted">${p.category}</small></td>
-                <td><code style="background:#F3F4FF;padding:.15rem .4rem;border-radius:4px;font-size:.8rem">${p.sku}</code></td>
-                <td>${stockBadge(p.current_stock)}</td>
-              </tr>`).join("")}
-            </tbody>
-          </table>
-        </div>`;
-      }
+      // Render Stock Bar Chart (Chart.js)
+      renderStockChart(products);
 
+      renderLucide();
     } catch (e) {
-      showToast("⚠️ Could not load dashboard — is the server running?", "error");
-      document.getElementById("low-stock-content").innerHTML = `<div class="alert alert-error"><span>🚫</span><span>${e.message}</span></div>`;
+      showToast("Could not load dashboard: " + e.message, "error");
+      document.getElementById("low-stock-content").innerHTML = `
+        <div class="alert alert-error">
+          <i data-lucide="alert-circle" class="alert-icon"></i>
+          <span>${e.message}</span>
+        </div>
+      `;
+      renderLucide();
     }
   };
+
+  function renderStockChart(products) {
+    const chartWrap = document.getElementById("chart-wrap");
+
+    if (!products || products.length === 0) {
+      chartWrap.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="bar-chart-2"></i></div>
+          <h3>No inventory data</h3>
+          <p><a href="products.html" style="color:var(--accent)">Add products</a> to see stock distribution.</p>
+        </div>
+      `;
+      renderLucide();
+      return;
+    }
+
+    // Ensure canvas exists
+    if (!document.getElementById("stock-chart")) {
+      chartWrap.innerHTML = `
+        <div class="chart-container">
+          <canvas id="stock-chart"></canvas>
+        </div>
+      `;
+    }
+
+    const labels = products.map(p => p.name.length > 18 ? p.name.slice(0, 16) + "…" : p.name);
+    const data = products.map(p => p.current_stock);
+    const backgroundColors = products.map(p => {
+      if (p.current_stock === 0) return "rgba(239, 68, 68, 0.85)"; // Red
+      if (p.current_stock < 10)  return "rgba(245, 158, 11, 0.85)"; // Orange
+      return "rgba(108, 99, 255, 0.85)";                           // Indigo
+    });
+    const borderColors = products.map(p => {
+      if (p.current_stock === 0) return "#dc2626";
+      if (p.current_stock < 10)  return "#d97706";
+      return "#4f46e5";
+    });
+
+    const ctx = document.getElementById("stock-chart").getContext("2d");
+
+    if (chartInstance) {
+      chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "Current Stock",
+          data: data,
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
+          borderWidth: 1.5,
+          borderRadius: 6,
+          maxBarThickness: 38,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const idx = items[0].dataIndex;
+                return products[idx].name + ` (${products[idx].sku})`;
+              },
+              label: (context) => {
+                const idx = context.dataIndex;
+                return ` Stock: ${context.parsed.y} ${products[idx].unit_of_measure}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              font: { family: "Inter", size: 11 },
+              color: "#6B7280"
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              font: { family: "Inter", size: 11 },
+              color: "#6B7280"
+            },
+            grid: {
+              color: "rgba(229, 231, 235, 0.7)"
+            }
+          }
+        }
+      }
+    });
+  }
 
   loadDashboard();
 

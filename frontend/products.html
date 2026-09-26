@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Lucide Icons via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 </head>
 <body>
 <div class="page-wrapper">
@@ -15,15 +17,18 @@
   <nav class="navbar">
     <div class="nav-inner">
       <a class="nav-brand" href="index.html">
-        <div class="logo-icon">📦</div>
+        <div class="logo-icon"><i data-lucide="package"></i></div>
         <span>Stock<em>Sense</em></span>
       </a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i data-lucide="menu"></i>
+      </button>
       <ul class="nav-links" id="nav-links">
-        <li><a href="index.html">🏠 Dashboard</a></li>
-        <li><a href="products.html">📋 Products</a></li>
-        <li><a href="receipt.html">📥 Receipt</a></li>
-        <li><a href="delivery.html">📤 Delivery</a></li>
+        <li><a href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a href="products.html"><i data-lucide="boxes"></i> Products</a></li>
+        <li><a href="receipt.html"><i data-lucide="arrow-down-to-dot"></i> Receipt</a></li>
+        <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
+        <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
       </ul>
     </div>
   </nav>
@@ -31,17 +36,20 @@
   <!-- ── Content ── -->
   <main class="content">
     <div class="page-header">
-      <div class="header-icon">📋</div>
+      <div class="header-icon"><i data-lucide="boxes"></i></div>
       <div>
         <h1>Products</h1>
-        <p>Manage your product catalogue. Stock levels are computed from the transaction ledger.</p>
+        <p>Manage product catalog. Current stock balances are dynamically derived from the transaction ledger.</p>
       </div>
     </div>
 
-    <!-- Add Product Form -->
+    <!-- Add Product Form & Info -->
     <div class="grid-2">
       <div class="card">
-        <div class="card-title">➕ Add New Product</div>
+        <div class="card-title">
+          <i data-lucide="plus-circle"></i>
+          <span>Add New Product</span>
+        </div>
         <div id="form-alert" class="alert hidden"></div>
 
         <form id="product-form" novalidate>
@@ -73,18 +81,22 @@
             </div>
           </div>
           <button type="submit" class="btn btn-primary mt-3" id="submit-btn">
-            ✅ Add Product
+            <i data-lucide="plus"></i>
+            <span>Add Product</span>
           </button>
         </form>
       </div>
 
       <!-- Quick Info -->
       <div class="card" style="align-self:start;">
-        <div class="card-title">💡 How Stock Works</div>
-        <p style="margin-bottom:.8rem;">StockSense uses an <strong>append-only ledger</strong>. Every receipt or delivery creates a transaction row — the current stock is always <em>computed</em> by summing these rows, never stored directly.</p>
+        <div class="card-title">
+          <i data-lucide="info"></i>
+          <span>Ledger Stock Pattern</span>
+        </div>
+        <p style="margin-bottom:.8rem;">StockSense uses an <strong>append-only ledger</strong>. The Product table contains no stock field. Every inbound or outbound event is recorded in the ledger — balance is calculated on demand.</p>
         <div class="alert alert-info" style="margin-bottom:0">
-          <span>ℹ️</span>
-          <span>After adding a product, go to <a href="receipt.html" style="color:var(--accent-dark);font-weight:600">Receipt</a> to add initial stock.</span>
+          <i data-lucide="lightbulb" class="alert-icon"></i>
+          <span>After adding a product, head to <a href="receipt.html" style="color:var(--accent-dark);font-weight:600">Stock Receipt</a> to register incoming inventory.</span>
         </div>
       </div>
     </div>
@@ -92,8 +104,14 @@
     <!-- Products Table -->
     <div class="card mt-3">
       <div class="flex items-center justify-between mb-2">
-        <div class="card-title" style="margin-bottom:0">📦 All Products</div>
-        <button class="btn btn-outline" id="refresh-btn" onclick="loadProducts()">🔄 Refresh</button>
+        <div class="card-title" style="margin-bottom:0">
+          <i data-lucide="list"></i>
+          <span>Product Catalogue</span>
+        </div>
+        <button class="btn btn-outline" id="refresh-btn" onclick="loadProducts()">
+          <i data-lucide="refresh-cw"></i>
+          <span>Refresh</span>
+        </button>
       </div>
 
       <div id="table-container">
@@ -102,7 +120,9 @@
     </div>
   </main>
 
-  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+  <footer>
+    <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
+  </footer>
 </div>
 
 <!-- Toast -->
@@ -110,10 +130,11 @@
 
 <script type="module">
   import { api } from "./api.js";
-  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, stockBadge, validateRequired } from "./utils.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, stockBadge, validateRequired, renderLucide } from "./utils.js";
 
   markActiveNav();
   initNavToggle();
+  renderLucide();
 
   const form       = document.getElementById("product-form");
   const alert      = document.getElementById("form-alert");
@@ -126,11 +147,14 @@
     try {
       const products = await api.getProducts();
       if (!products.length) {
-        tableEl.innerHTML = `<div class="empty-state">
-          <div class="empty-icon">🗂️</div>
-          <h3>No products yet</h3>
-          <p>Add your first product using the form above.</p>
-        </div>`;
+        tableEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon"><i data-lucide="archive"></i></div>
+            <h3>No products registered</h3>
+            <p>Add your first product using the form above.</p>
+          </div>
+        `;
+        renderLucide();
         return;
       }
 
@@ -139,8 +163,12 @@
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Name</th><th>SKU</th><th>Category</th>
-                <th>UOM</th><th>Current Stock</th>
+                <th style="width:60px">#</th>
+                <th>Name</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>UOM</th>
+                <th style="text-align:right">Current Stock</th>
               </tr>
             </thead>
             <tbody id="tbody"></tbody>
@@ -153,18 +181,22 @@
         tr.innerHTML = `
           <td class="text-muted">${i + 1}</td>
           <td><strong>${p.name}</strong></td>
-          <td><code style="background:#F3F4FF;padding:.15rem .4rem;border-radius:4px;font-size:.83rem">${p.sku}</code></td>
+          <td><code style="background:#F3F4FF;color:var(--accent-dark);padding:.15rem .4rem;border-radius:4px;font-size:.83rem">${p.sku}</code></td>
           <td>${p.category}</td>
           <td>${p.unit_of_measure}</td>
-          <td>${stockBadge(p.current_stock)}</td>`;
+          <td style="text-align:right">${stockBadge(p.current_stock)}</td>`;
         tbody.appendChild(tr);
       });
+      renderLucide();
     } catch (e) {
-      tableEl.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">⚠️</div>
-        <h3>Could not load products</h3>
-        <p>${e.message}</p>
-      </div>`;
+      tableEl.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="alert-triangle"></i></div>
+          <h3>Could not load products</h3>
+          <p>${e.message}</p>
+        </div>
+      `;
+      renderLucide();
     }
   };
 
@@ -200,6 +232,7 @@
       showAlert(alert, err.message, "error");
     } finally {
       setLoading(submitBtn, false);
+      renderLucide();
     }
   });
 </script>

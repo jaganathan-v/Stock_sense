@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StockSense — Receipt</title>
+  <title>StockSense — Stock Receipt</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Lucide Icons via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 </head>
 <body>
 <div class="page-wrapper">
@@ -15,15 +17,18 @@
   <nav class="navbar">
     <div class="nav-inner">
       <a class="nav-brand" href="index.html">
-        <div class="logo-icon">📦</div>
+        <div class="logo-icon"><i data-lucide="package"></i></div>
         <span>Stock<em>Sense</em></span>
       </a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i data-lucide="menu"></i>
+      </button>
       <ul class="nav-links" id="nav-links">
-        <li><a href="index.html">🏠 Dashboard</a></li>
-        <li><a href="products.html">📋 Products</a></li>
-        <li><a href="receipt.html">📥 Receipt</a></li>
-        <li><a href="delivery.html">📤 Delivery</a></li>
+        <li><a href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a href="products.html"><i data-lucide="boxes"></i> Products</a></li>
+        <li><a href="receipt.html"><i data-lucide="arrow-down-to-dot"></i> Receipt</a></li>
+        <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
+        <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
       </ul>
     </div>
   </nav>
@@ -31,17 +36,20 @@
   <!-- ── Content ── -->
   <main class="content">
     <div class="page-header">
-      <div class="header-icon">📥</div>
+      <div class="header-icon"><i data-lucide="arrow-down-to-dot"></i></div>
       <div>
         <h1>Stock Receipt</h1>
-        <p>Record goods arriving into the warehouse. Each receipt creates a positive ledger entry.</p>
+        <p>Record inbound goods arriving at the warehouse. Each receipt appends an immutable positive entry.</p>
       </div>
     </div>
 
     <div class="grid-2">
       <!-- Form -->
       <div class="card">
-        <div class="card-title">📦 New Receipt</div>
+        <div class="card-title">
+          <i data-lucide="plus-circle"></i>
+          <span>New Inward Receipt</span>
+        </div>
         <div id="form-alert" class="alert hidden"></div>
 
         <form id="receipt-form" novalidate>
@@ -67,49 +75,62 @@
 
             <div class="form-group full">
               <label for="note">Note (optional)</label>
-              <input type="text" id="note" placeholder="e.g. PO-2026-001, Supplier A" maxlength="255" />
+              <input type="text" id="note" placeholder="e.g. PO-2026-001, Supplier Batch A" maxlength="255" />
             </div>
           </div>
 
           <button type="submit" class="btn btn-success mt-3 w-full" id="submit-btn">
-            📥 Record Receipt
+            <i data-lucide="arrow-down-left"></i>
+            <span>Record Receipt</span>
           </button>
         </form>
       </div>
 
-      <!-- Recent indicator -->
-      <div style="display:flex;flex-direction:column;gap:1rem;">
+      <!-- Recent database receipts panel -->
+      <div style="display:flex;flex-direction:column;gap:1.25rem;">
         <div class="card">
-          <div class="card-title">ℹ️ What Happens Here</div>
-          <p>When you submit a receipt:</p>
-          <ol style="margin:.8rem 0 0 1.2rem;line-height:2;font-size:.92rem;color:var(--muted)">
-            <li>A <strong>StockMove</strong> row is appended with a <span style="color:var(--success);font-weight:700">positive quantity</span></li>
-            <li>The computed stock for that product increases immediately</li>
-            <li>No "stock" field is ever directly written on the Product</li>
+          <div class="card-title">
+            <i data-lucide="info"></i>
+            <span>Ledger Integrity</span>
+          </div>
+          <p>When you record a receipt:</p>
+          <ol style="margin:.8rem 0 0 1.2rem;line-height:1.9;font-size:.9rem;color:var(--muted)">
+            <li>A <strong>StockMove</strong> record is appended with a positive quantity change.</li>
+            <li>Computed stock is recalculated immediately via ledger summation.</li>
+            <li>No editable stock number is ever stored on the Product.</li>
           </ol>
         </div>
 
         <div class="card">
-          <div class="card-title">✅ Recent Receipts</div>
+          <div class="card-title justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="clock"></i>
+              <span>Recent Receipts (from Database)</span>
+            </div>
+            <a href="history.html" style="font-size:.8rem;color:var(--accent);text-decoration:none">View All →</a>
+          </div>
           <div id="recent-list">
-            <p class="text-muted text-center">Receipts recorded this session will appear here.</p>
+            <div class="empty-state" style="padding:1.5rem 0"><div class="spinner"></div><p class="mt-1">Loading database records…</p></div>
           </div>
         </div>
       </div>
     </div>
   </main>
 
-  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+  <footer>
+    <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
+  </footer>
 </div>
 
 <div id="toast"></div>
 
 <script type="module">
   import { api } from "./api.js";
-  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt } from "./utils.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt, formatDateTime, renderLucide } from "./utils.js";
 
   markActiveNav();
   initNavToggle();
+  renderLucide();
 
   const form        = document.getElementById("receipt-form");
   const productSel  = document.getElementById("product");
@@ -121,17 +142,59 @@
   const previewEl   = document.getElementById("stock-preview");
   const recentList  = document.getElementById("recent-list");
 
-  let receipts = [];
-
   // ── Load products into select ──
-  (async () => {
+  async function loadProducts() {
     try {
       const products = await api.getProducts();
       populateProductSelect(productSel, products);
     } catch (e) {
-      productSel.innerHTML = `<option value="">⚠️ Failed to load — is the server running?</option>`;
+      productSel.innerHTML = `<option value="">Failed to load products</option>`;
+      showToast("Could not load products: " + e.message, "error");
     }
-  })();
+  }
+
+  // ── Load real database receipts ──
+  async function loadRecentReceipts() {
+    try {
+      const recent = await api.getRecentMoves({ type: "receipt", limit: 5 });
+      if (!recent || !recent.length) {
+        recentList.innerHTML = `
+          <div class="empty-state" style="padding:1.5rem 0">
+            <div class="empty-icon"><i data-lucide="inbox"></i></div>
+            <p>No receipts recorded in the database yet.</p>
+          </div>
+        `;
+      } else {
+        recentList.innerHTML = recent.map(r => `
+          <div class="low-stock-item" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.04);margin-bottom:.65rem">
+            <div>
+              <div class="low-stock-name">${r.product_name || `Product #${r.product_id}`}</div>
+              <div class="low-stock-sku" style="display:flex;align-items:center;gap:.3rem;margin-top:2px">
+                <i data-lucide="clock" class="badge-icon"></i> ${formatDateTime(r.timestamp)}
+                ${r.note ? `• ${r.note}` : ""}
+              </div>
+            </div>
+            <span class="badge badge-green">
+              <i data-lucide="arrow-down-left" class="badge-icon"></i>
+              +${r.quantity_change}
+            </span>
+          </div>
+        `).join("");
+      }
+      renderLucide();
+    } catch (e) {
+      recentList.innerHTML = `
+        <div class="alert alert-error" style="margin:0">
+          <i data-lucide="alert-circle" class="alert-icon"></i>
+          <span>Failed to load recent receipts</span>
+        </div>
+      `;
+      renderLucide();
+    }
+  }
+
+  loadProducts();
+  loadRecentReceipts();
 
   // ── Show current stock when product is selected ──
   productSel.addEventListener("change", () => {
@@ -140,7 +203,8 @@
     const stock = parseInt(opt.dataset.stock, 10);
     const uom   = opt.dataset.uom;
     previewWrap.style.display = "block";
-    previewEl.innerHTML = `<span>📊</span><span>Current stock: <strong>${stock} ${uom}</strong></span>`;
+    previewEl.innerHTML = `<i data-lucide="layers" class="alert-icon"></i><span>Current ledger balance: <strong>${stock} ${uom}</strong></span>`;
+    renderLucide();
   });
 
   // ── Submit ──
@@ -159,37 +223,21 @@
       const note      = noteEl.value.trim();
 
       const move = await api.receipt({ product_id: productId, quantity, note });
+      const pName = move.product_name || "Product";
 
-      // Update recent list
-      const productName = productSel.selectedOptions[0].textContent.split("(")[0].trim();
-      receipts.unshift({ productName, quantity, note, id: move.id });
-      renderRecent();
-
-      showToast(`✅ Received ${quantity} units for ${productName}`, "success");
+      showToast(`Received ${quantity} units for ${pName}`, "success");
       form.reset();
       previewWrap.style.display = "none";
 
-      // Refresh product options with updated stock
-      const products = await api.getProducts();
-      populateProductSelect(productSel, products);
+      // Refresh both products dropdown and real database recent list
+      await Promise.all([loadProducts(), loadRecentReceipts()]);
     } catch (err) {
       showAlert(alertEl, err.message, "error");
     } finally {
       setLoading(submitBtn, false);
+      renderLucide();
     }
   });
-
-  function renderRecent() {
-    if (!receipts.length) return;
-    recentList.innerHTML = receipts.slice(0, 5).map(r => `
-      <div class="low-stock-item" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.04)">
-        <div>
-          <div class="low-stock-name">${r.productName}</div>
-          <div class="low-stock-sku">${r.note || "No note"}</div>
-        </div>
-        <span class="badge badge-green">+${r.quantity}</span>
-      </div>`).join("");
-  }
 </script>
 </body>
 </html>

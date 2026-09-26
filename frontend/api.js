@@ -31,6 +31,16 @@ export const api = {
   receipt:  (body) => request("POST", "/moves/receipt",  body),
   delivery: (body) => request("POST", "/moves/delivery", body),
 
+  // Recent & All Moves
+  getRecentMoves: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", params.limit);
+    if (params.type) q.set("type", params.type);
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return request("GET", `/moves/recent${qs}`);
+  },
+  getAllMoves: () => request("GET", "/moves/all"),
+
   // Dashboard
   getDashboard: () => request("GET", "/dashboard"),
 };

@@ -1,6 +1,14 @@
 /**
  * utils.js — Shared UI helpers used across all pages.
+ * Fully integrated with Lucide icons (no emojis).
  */
+
+/* ── Lucide Icon Re-initialization ───────────────────────── */
+export function renderLucide() {
+  if (typeof window !== "undefined" && window.lucide && typeof window.lucide.createIcons === "function") {
+    window.lucide.createIcons();
+  }
+}
 
 /* ── Toast notification ──────────────────────────────────── */
 let toastTimer = null;
@@ -10,12 +18,24 @@ export function showToast(message, type = "info") {
   if (!el) return;
   el.textContent = "";
 
-  const icon = { success: "✅", error: "❌", info: "ℹ️" }[type] ?? "ℹ️";
-  const iconSpan = Object.assign(document.createElement("span"), { textContent: icon });
-  const msgSpan  = Object.assign(document.createElement("span"), { textContent: message });
+  const iconName = {
+    success: "check-circle-2",
+    error: "alert-circle",
+    warn: "alert-triangle",
+    info: "info"
+  }[type] ?? "info";
 
-  el.append(iconSpan, msgSpan);
+  const iconEl = document.createElement("i");
+  iconEl.setAttribute("data-lucide", iconName);
+  iconEl.className = "toast-icon";
+
+  const msgSpan = document.createElement("span");
+  msgSpan.textContent = message;
+
+  el.append(iconEl, msgSpan);
   el.className = `show ${type}`;
+
+  renderLucide();
 
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
@@ -27,8 +47,17 @@ export function showToast(message, type = "info") {
 export function showAlert(el, message, type = "info") {
   if (!el) return;
   el.className = `alert alert-${type}`;
-  el.innerHTML = `<span>${iconFor(type)}</span><span>${message}</span>`;
+
+  const iconName = {
+    success: "check-circle",
+    error: "alert-octagon",
+    warn: "alert-triangle",
+    info: "info"
+  }[type] ?? "info";
+
+  el.innerHTML = `<i data-lucide="${iconName}" class="alert-icon"></i><span>${message}</span>`;
   el.classList.remove("hidden");
+  renderLucide();
   el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -36,26 +65,23 @@ export function hideAlert(el) {
   if (el) el.classList.add("hidden");
 }
 
-function iconFor(type) {
-  return { success: "✅", error: "🚫", warn: "⚠️", info: "ℹ️" }[type] ?? "";
-}
-
 /* ── Button loading state ────────────────────────────────── */
 export function setLoading(btn, loading) {
   btn.disabled = loading;
   btn._originalText ??= btn.innerHTML;
   btn.innerHTML = loading
-    ? `<span class="spinner"></span> ${btn._originalText.replace(/<[^>]+>/g, "")}`
+    ? `<span class="spinner"></span> Loading…`
     : btn._originalText;
+  renderLucide();
 }
 
 /* ── Populate a <select> with products ───────────────────── */
 export function populateProductSelect(selectEl, products, placeholder = "— Select a product —") {
-  selectEl.innerHTML = `<option value="">  ${placeholder}</option>`;
+  selectEl.innerHTML = `<option value="">${placeholder}</option>`;
   products.forEach(p => {
     const opt = document.createElement("option");
     opt.value = p.id;
-    opt.textContent = `${p.name}  (SKU: ${p.sku})  •  ${p.current_stock} ${p.unit_of_measure}`;
+    opt.textContent = `${p.name} (SKU: ${p.sku}) • ${p.current_stock} ${p.unit_of_measure}`;
     opt.dataset.stock = p.current_stock;
     opt.dataset.uom   = p.unit_of_measure;
     selectEl.appendChild(opt);
@@ -64,9 +90,48 @@ export function populateProductSelect(selectEl, products, placeholder = "— Sel
 
 /* ── Stock badge helper ──────────────────────────────────── */
 export function stockBadge(qty) {
-  if (qty === 0)  return `<span class="badge badge-red">🚨 Out of Stock</span>`;
-  if (qty < 10)   return `<span class="badge badge-orange">⚠️ Low: ${qty}</span>`;
-  return              `<span class="badge badge-green">✅ ${qty}</span>`;
+  if (qty === 0) {
+    return `<span class="badge badge-red"><i data-lucide="alert-octagon" class="badge-icon"></i> Out of Stock</span>`;
+  }
+  if (qty < 10) {
+    return `<span class="badge badge-orange"><i data-lucide="alert-triangle" class="badge-icon"></i> Low: ${qty}</span>`;
+  }
+  return `<span class="badge badge-green"><i data-lucide="check" class="badge-icon"></i> In Stock: ${qty}</span>`;
+}
+
+/* ── Move Type badge helper ──────────────────────────────── */
+export function moveTypeBadge(type) {
+  const t = (type || "").toLowerCase();
+  switch (t) {
+    case "receipt":
+      return `<span class="badge badge-green"><i data-lucide="arrow-down-left" class="badge-icon"></i> Receipt</span>`;
+    case "delivery":
+      return `<span class="badge badge-red"><i data-lucide="arrow-up-right" class="badge-icon"></i> Delivery</span>`;
+    case "transfer":
+      return `<span class="badge badge-blue"><i data-lucide="arrow-left-right" class="badge-icon"></i> Transfer</span>`;
+    case "adjustment":
+      return `<span class="badge badge-orange"><i data-lucide="sliders" class="badge-icon"></i> Adjustment</span>`;
+    default:
+      return `<span class="badge badge-gray">${type}</span>`;
+  }
+}
+
+/* ── Format ISO Date / Timestamp ─────────────────────────── */
+export function formatDateTime(isoString) {
+  if (!isoString) return "—";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  } catch {
+    return isoString;
+  }
 }
 
 /* ── Mark active nav link ────────────────────────────────── */

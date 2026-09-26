@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StockSense — Delivery</title>
+  <title>StockSense — Stock Delivery</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <!-- Lucide Icons via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest"></script>
 </head>
 <body>
 <div class="page-wrapper">
@@ -15,15 +17,18 @@
   <nav class="navbar">
     <div class="nav-inner">
       <a class="nav-brand" href="index.html">
-        <div class="logo-icon">📦</div>
+        <div class="logo-icon"><i data-lucide="package"></i></div>
         <span>Stock<em>Sense</em></span>
       </a>
-      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+        <i data-lucide="menu"></i>
+      </button>
       <ul class="nav-links" id="nav-links">
-        <li><a href="index.html">🏠 Dashboard</a></li>
-        <li><a href="products.html">📋 Products</a></li>
-        <li><a href="receipt.html">📥 Receipt</a></li>
-        <li><a href="delivery.html">📤 Delivery</a></li>
+        <li><a href="index.html"><i data-lucide="layout-dashboard"></i> Dashboard</a></li>
+        <li><a href="products.html"><i data-lucide="boxes"></i> Products</a></li>
+        <li><a href="receipt.html"><i data-lucide="arrow-down-to-dot"></i> Receipt</a></li>
+        <li><a href="delivery.html"><i data-lucide="arrow-up-from-dot"></i> Delivery</a></li>
+        <li><a href="history.html"><i data-lucide="history"></i> Move History</a></li>
       </ul>
     </div>
   </nav>
@@ -31,17 +36,20 @@
   <!-- ── Content ── -->
   <main class="content">
     <div class="page-header">
-      <div class="header-icon">📤</div>
+      <div class="header-icon"><i data-lucide="arrow-up-from-dot"></i></div>
       <div>
         <h1>Stock Delivery</h1>
-        <p>Record goods leaving the warehouse. Deliveries are validated against available stock before being committed.</p>
+        <p>Record outbound shipments leaving the warehouse. Deliveries are pre-validated against ledger balances.</p>
       </div>
     </div>
 
     <div class="grid-2">
       <!-- Form -->
       <div class="card">
-        <div class="card-title">🚚 New Delivery</div>
+        <div class="card-title">
+          <i data-lucide="truck"></i>
+          <span>New Outward Delivery</span>
+        </div>
         <div id="form-alert" class="alert hidden"></div>
 
         <form id="delivery-form" novalidate>
@@ -80,47 +88,61 @@
 
             <div class="form-group full">
               <label for="note">Note (optional)</label>
-              <input type="text" id="note" placeholder="e.g. Order #5532, Customer B" maxlength="255" />
+              <input type="text" id="note" placeholder="e.g. Order #ORD-2026-09, Customer X" maxlength="255" />
             </div>
           </div>
 
           <button type="submit" class="btn btn-danger mt-3 w-full" id="submit-btn">
-            📤 Record Delivery
+            <i data-lucide="arrow-up-right"></i>
+            <span>Record Delivery</span>
           </button>
         </form>
       </div>
 
       <!-- Side panel -->
-      <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div style="display:flex;flex-direction:column;gap:1.25rem;">
         <div class="card">
-          <div class="card-title">🛡️ Stock Validation</div>
-          <p>The backend will <strong>reject</strong> any delivery where the requested quantity exceeds available stock. The check uses the live ledger sum — it's always accurate.</p>
+          <div class="card-title">
+            <i data-lucide="shield-check"></i>
+            <span>Stock Balance Validation</span>
+          </div>
+          <p>The backend will <strong>strictly reject</strong> any delivery where requested quantity exceeds the computed stock. The check sums all previous ledger rows in real-time.</p>
           <div class="alert alert-warn mt-2" style="margin-bottom:0">
-            <span>⚠️</span><span>You'll see a clear error message with the exact available and requested quantities if there's a shortfall.</span>
+            <i data-lucide="alert-triangle" class="alert-icon"></i>
+            <span>Attempting to ship more than available triggers a 422 error and preserves ledger integrity.</span>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">📤 Recent Deliveries</div>
+          <div class="card-title justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="clock"></i>
+              <span>Recent Deliveries (from Database)</span>
+            </div>
+            <a href="history.html" style="font-size:.8rem;color:var(--accent);text-decoration:none">View All →</a>
+          </div>
           <div id="recent-list">
-            <p class="text-muted text-center">Deliveries recorded this session will appear here.</p>
+            <div class="empty-state" style="padding:1.5rem 0"><div class="spinner"></div><p class="mt-1">Loading database records…</p></div>
           </div>
         </div>
       </div>
     </div>
   </main>
 
-  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+  <footer>
+    <p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Immutable Ledger Architecture</p>
+  </footer>
 </div>
 
 <div id="toast"></div>
 
 <script type="module">
   import { api } from "./api.js";
-  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt } from "./utils.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt, formatDateTime, renderLucide } from "./utils.js";
 
   markActiveNav();
   initNavToggle();
+  renderLucide();
 
   const form          = document.getElementById("delivery-form");
   const productSel    = document.getElementById("product");
@@ -137,17 +159,60 @@
   const recentList    = document.getElementById("recent-list");
 
   let products = [];
-  let deliveries = [];
 
   // ── Load products ──
-  (async () => {
+  async function loadProducts() {
     try {
       products = await api.getProducts();
       populateProductSelect(productSel, products);
     } catch (e) {
-      productSel.innerHTML = `<option value="">⚠️ Failed to load — is the server running?</option>`;
+      productSel.innerHTML = `<option value="">Failed to load products</option>`;
+      showToast("Could not load products: " + e.message, "error");
     }
-  })();
+  }
+
+  // ── Load real database deliveries ──
+  async function loadRecentDeliveries() {
+    try {
+      const recent = await api.getRecentMoves({ type: "delivery", limit: 5 });
+      if (!recent || !recent.length) {
+        recentList.innerHTML = `
+          <div class="empty-state" style="padding:1.5rem 0">
+            <div class="empty-icon"><i data-lucide="inbox"></i></div>
+            <p>No deliveries recorded in the database yet.</p>
+          </div>
+        `;
+      } else {
+        recentList.innerHTML = recent.map(r => `
+          <div class="low-stock-item" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04);margin-bottom:.65rem">
+            <div>
+              <div class="low-stock-name">${r.product_name || `Product #${r.product_id}`}</div>
+              <div class="low-stock-sku" style="display:flex;align-items:center;gap:.3rem;margin-top:2px">
+                <i data-lucide="clock" class="badge-icon"></i> ${formatDateTime(r.timestamp)}
+                ${r.note ? `• ${r.note}` : ""}
+              </div>
+            </div>
+            <span class="badge badge-red">
+              <i data-lucide="arrow-up-right" class="badge-icon"></i>
+              ${r.quantity_change}
+            </span>
+          </div>
+        `).join("");
+      }
+      renderLucide();
+    } catch (e) {
+      recentList.innerHTML = `
+        <div class="alert alert-error" style="margin:0">
+          <i data-lucide="alert-circle" class="alert-icon"></i>
+          <span>Failed to load recent deliveries</span>
+        </div>
+      `;
+      renderLucide();
+    }
+  }
+
+  loadProducts();
+  loadRecentDeliveries();
 
   // ── Stock gauge on product change ──
   productSel.addEventListener("change", updateGauge);
@@ -163,18 +228,19 @@
     if (!p) { previewWrap.style.display = "none"; remainingWrap.style.display = "none"; return; }
 
     previewWrap.style.display = "block";
-    stockLabel.textContent = `Available: ${p.current_stock} ${p.unit_of_measure}`;
+    stockLabel.textContent = `Available Balance: ${p.current_stock} ${p.unit_of_measure}`;
     stockValue.textContent = p.current_stock;
     stockValue.className = p.current_stock === 0 ? "badge badge-red"
                          : p.current_stock < 10  ? "badge badge-orange"
-                                                  : "badge badge-green";
-    // bar width capped at 100 for visual purposes (max reference = 200)
+                                                 : "badge badge-green";
+
     const pct = Math.min((p.current_stock / 200) * 100, 100);
     stockBar.style.width = `${pct}%`;
     stockBar.style.background = p.current_stock === 0 ? "var(--danger)"
-                               : p.current_stock < 10  ? "var(--warning)"
+                                : p.current_stock < 10  ? "var(--warning)"
                                                         : "var(--success)";
     updateRemainingPreview();
+    renderLucide();
   }
 
   function updateRemainingPreview() {
@@ -186,14 +252,24 @@
     const remaining = p.current_stock - qty;
     if (remaining < 0) {
       remainingAlert.className = "alert alert-error";
-      remainingAlert.innerHTML = `<span>🚫</span><span>Shortfall of <strong>${Math.abs(remaining)}</strong> ${p.unit_of_measure} — this delivery will be rejected.</span>`;
+      remainingAlert.innerHTML = `
+        <i data-lucide="alert-octagon" class="alert-icon"></i>
+        <span>Shortfall of <strong>${Math.abs(remaining)} ${p.unit_of_measure}</strong> — delivery exceeds ledger balance.</span>
+      `;
     } else if (remaining < 10) {
       remainingAlert.className = "alert alert-warn";
-      remainingAlert.innerHTML = `<span>⚠️</span><span>After delivery, stock will be <strong>${remaining} ${p.unit_of_measure}</strong> — below the low-stock threshold.</span>`;
+      remainingAlert.innerHTML = `
+        <i data-lucide="alert-triangle" class="alert-icon"></i>
+        <span>After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining (low-stock warning).</span>
+      `;
     } else {
       remainingAlert.className = "alert alert-success";
-      remainingAlert.innerHTML = `<span>✅</span><span>Sufficient stock. After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining.</span>`;
+      remainingAlert.innerHTML = `
+        <i data-lucide="check-circle" class="alert-icon"></i>
+        <span>Sufficient stock. After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining.</span>
+      `;
     }
+    renderLucide();
   }
 
   // ── Submit ──
@@ -212,38 +288,22 @@
       const note      = noteEl.value.trim();
 
       const move = await api.delivery({ product_id: productId, quantity, note });
+      const pName = move.product_name || "Product";
 
-      const productName = productSel.selectedOptions[0].textContent.split("(")[0].trim();
-      deliveries.unshift({ productName, quantity, note, id: move.id });
-      renderRecent();
-
-      showToast(`📤 Shipped ${quantity} units of ${productName}`, "success");
+      showToast(`Shipped ${quantity} units of ${pName}`, "success");
       form.reset();
       previewWrap.style.display = "none";
       remainingWrap.style.display = "none";
 
-      // Refresh stock levels
-      products = await api.getProducts();
-      populateProductSelect(productSel, products);
+      // Refresh products and real database recent list
+      await Promise.all([loadProducts(), loadRecentDeliveries()]);
     } catch (err) {
-      // Backend gives a clear insufficient-stock message — show it prominently
       showAlert(alertEl, err.message, "error");
     } finally {
       setLoading(submitBtn, false);
+      renderLucide();
     }
   });
-
-  function renderRecent() {
-    if (!deliveries.length) return;
-    recentList.innerHTML = deliveries.slice(0, 5).map(d => `
-      <div class="low-stock-item" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)">
-        <div>
-          <div class="low-stock-name">${d.productName}</div>
-          <div class="low-stock-sku">${d.note || "No note"}</div>
-        </div>
-        <span class="badge badge-red">−${d.quantity}</span>
-      </div>`).join("");
-  }
 </script>
 </body>
 </html>

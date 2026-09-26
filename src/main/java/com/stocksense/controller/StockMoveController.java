@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/moves")
 @CrossOrigin(origins = "*")
@@ -30,5 +32,19 @@ public class StockMoveController {
     public ResponseEntity<StockMoveResponseDto> recordDelivery(@Valid @RequestBody DeliveryRequestDto dto) {
         StockMoveResponseDto move = stockMoveService.recordDelivery(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(move);
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<List<StockMoveResponseDto>> getRecentMoves(
+            @RequestParam(name = "type", required = false) String type,
+            @RequestParam(name = "limit", defaultValue = "10") int limit) {
+        List<StockMoveResponseDto> recent = stockMoveService.getRecentMoves(type, limit);
+        return ResponseEntity.ok(recent);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<StockMoveResponseDto>> getAllMoves() {
+        List<StockMoveResponseDto> all = stockMoveService.getAllMoves();
+        return ResponseEntity.ok(all);
     }
 }

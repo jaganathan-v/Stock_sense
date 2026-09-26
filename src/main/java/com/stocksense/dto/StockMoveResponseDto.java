@@ -11,8 +11,17 @@ public class StockMoveResponseDto {
     @JsonProperty("product_id")
     private Long productId;
 
+    @JsonProperty("product_name")
+    private String productName;
+
+    @JsonProperty("product_sku")
+    private String productSku;
+
     @JsonProperty("location_id")
     private Long locationId;
+
+    @JsonProperty("location_name")
+    private String locationName;
 
     @JsonProperty("quantity_change")
     private Integer quantityChange;
@@ -25,17 +34,26 @@ public class StockMoveResponseDto {
 
     private String note;
 
+    @JsonProperty("unit_of_measure")
+    private String unitOfMeasure;
+
     public StockMoveResponseDto() {
     }
 
-    public StockMoveResponseDto(Long id, Long productId, Long locationId, Integer quantityChange, String moveType, LocalDateTime timestamp, String note) {
+    public StockMoveResponseDto(Long id, Long productId, String productName, String productSku,
+                                Long locationId, String locationName, Integer quantityChange,
+                                String moveType, LocalDateTime timestamp, String note, String unitOfMeasure) {
         this.id = id;
         this.productId = productId;
+        this.productName = productName;
+        this.productSku = productSku;
         this.locationId = locationId;
+        this.locationName = locationName;
         this.quantityChange = quantityChange;
         this.moveType = moveType;
         this.timestamp = timestamp;
         this.note = note;
+        this.unitOfMeasure = unitOfMeasure;
     }
 
     public Long getId() {
@@ -54,12 +72,36 @@ public class StockMoveResponseDto {
         this.productId = productId;
     }
 
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductSku() {
+        return productSku;
+    }
+
+    public void setProductSku(String productSku) {
+        this.productSku = productSku;
+    }
+
     public Long getLocationId() {
         return locationId;
     }
 
     public void setLocationId(Long locationId) {
         this.locationId = locationId;
+    }
+
+    public String getLocationName() {
+        return locationName;
+    }
+
+    public void setLocationName(String locationName) {
+        this.locationName = locationName;
     }
 
     public Integer getQuantityChange() {
@@ -92,5 +134,13 @@ public class StockMoveResponseDto {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getUnitOfMeasure() {
+        return unitOfMeasure;
+    }
+
+    public void setUnitOfMeasure(String unitOfMeasure) {
+        this.unitOfMeasure = unitOfMeasure;
     }
 }

@@ -11,8 +11,12 @@ import com.stocksense.model.Product;
 import com.stocksense.model.StockMove;
 import com.stocksense.repository.LocationRepository;
 import com.stocksense.repository.StockMoveRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -46,16 +50,7 @@ public class StockMoveService {
         );
 
         StockMove saved = stockMoveRepository.save(move);
-
-        return new StockMoveResponseDto(
-                saved.getId(),
-                product.getId(),
-                location.getId(),
-                saved.getQuantityChange(),
-                saved.getMoveType().getValue(),
-                saved.getTimestamp(),
-                saved.getNote()
-        );
+        return mapToDto(saved);
     }
 
     /**
@@ -85,15 +80,45 @@ public class StockMoveService {
         );
 
         StockMove saved = stockMoveRepository.save(move);
+        return mapToDto(saved);
+    }
 
+    @Transactional(readOnly = true)
+    public List<StockMoveResponseDto> getRecentMoves(String type, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        PageRequest pageRequest = PageRequest.of(0, safeLimit);
+
+        List<StockMove> moves;
+        if (type != null && !type.isBlank()) {
+            MoveType moveType = MoveType.fromValue(type.trim());
+            moves = stockMoveRepository.findRecentWithDetailsByMoveType(moveType, pageRequest);
+        } else {
+            moves = stockMoveRepository.findRecentWithDetails(pageRequest);
+        }
+
+        return moves.stream().map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StockMoveResponseDto> getAllMoves() {
+        return stockMoveRepository.findAllWithDetails().stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
+    private StockMoveResponseDto mapToDto(StockMove move) {
         return new StockMoveResponseDto(
-                saved.getId(),
-                product.getId(),
-                location.getId(),
-                saved.getQuantityChange(),
-                saved.getMoveType().getValue(),
-                saved.getTimestamp(),
-                saved.getNote()
+                move.getId(),
+                move.getProduct().getId(),
+                move.getProduct().getName(),
+                move.getProduct().getSku(),
+                move.getLocation().getId(),
+                move.getLocation().getName(),
+                move.getQuantityChange(),
+                move.getMoveType().getValue(),
+                move.getTimestamp(),
+                move.getNote(),
+                move.getProduct().getUnitOfMeasure()
         );
     }
 

@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -82,6 +83,8 @@ class StockSenseIntegrationTests {
                         .content(json))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.product_id").value(createdProductId))
+                .andExpect(jsonPath("$.product_name").value("Ergonomic Mechanical Keyboard"))
+                .andExpect(jsonPath("$.location_name").value("Main Warehouse"))
                 .andExpect(jsonPath("$.quantity_change").value(50))
                 .andExpect(jsonPath("$.move_type").value("receipt"));
     }
@@ -184,5 +187,30 @@ class StockSenseIntegrationTests {
                         .content(json))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.detail").exists());
+    }
+
+    @Test
+    @Order(9)
+    void testGetRecentMoves() throws Exception {
+        mockMvc.perform(get("/moves/recent").param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(greaterThanOrEqualTo(3)))
+                .andExpect(jsonPath("$[0].product_name").exists())
+                .andExpect(jsonPath("$[0].location_name").exists());
+
+        // Test with type filter: receipt
+        mockMvc.perform(get("/moves/recent").param("type", "receipt").param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].move_type").value("receipt"));
+    }
+
+    @Test
+    @Order(10)
+    void testGetAllMoves() throws Exception {
+        mockMvc.perform(get("/moves/all"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(greaterThanOrEqualTo(3)))
+                .andExpect(jsonPath("$[0].timestamp").exists())
+                .andExpect(jsonPath("$[0].quantity_change").exists());
     }
 }
