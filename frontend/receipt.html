@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockSense — Receipt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <div class="logo-icon">📦</div>
+        <span>Stock<em>Sense</em></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html">🏠 Dashboard</a></li>
+        <li><a href="products.html">📋 Products</a></li>
+        <li><a href="receipt.html">📥 Receipt</a></li>
+        <li><a href="delivery.html">📤 Delivery</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <main class="content">
+    <div class="page-header">
+      <div class="header-icon">📥</div>
+      <div>
+        <h1>Stock Receipt</h1>
+        <p>Record goods arriving into the warehouse. Each receipt creates a positive ledger entry.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Form -->
+      <div class="card">
+        <div class="card-title">📦 New Receipt</div>
+        <div id="form-alert" class="alert hidden"></div>
+
+        <form id="receipt-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="product">Product *</label>
+              <select id="product">
+                <option value="">— Loading products… —</option>
+              </select>
+              <span class="field-error" id="product-err"></span>
+            </div>
+
+            <!-- Live stock preview -->
+            <div class="form-group full" id="stock-preview-wrap" style="display:none">
+              <div class="alert alert-info" id="stock-preview" style="margin-bottom:0"></div>
+            </div>
+
+            <div class="form-group full">
+              <label for="quantity">Quantity to Receive *</label>
+              <input type="number" id="quantity" min="1" step="1" placeholder="e.g. 50" />
+              <span class="field-error" id="qty-err"></span>
+            </div>
+
+            <div class="form-group full">
+              <label for="note">Note (optional)</label>
+              <input type="text" id="note" placeholder="e.g. PO-2026-001, Supplier A" maxlength="255" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success mt-3 w-full" id="submit-btn">
+            📥 Record Receipt
+          </button>
+        </form>
+      </div>
+
+      <!-- Recent indicator -->
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="card">
+          <div class="card-title">ℹ️ What Happens Here</div>
+          <p>When you submit a receipt:</p>
+          <ol style="margin:.8rem 0 0 1.2rem;line-height:2;font-size:.92rem;color:var(--muted)">
+            <li>A <strong>StockMove</strong> row is appended with a <span style="color:var(--success);font-weight:700">positive quantity</span></li>
+            <li>The computed stock for that product increases immediately</li>
+            <li>No "stock" field is ever directly written on the Product</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <div class="card-title">✅ Recent Receipts</div>
+          <div id="recent-list">
+            <p class="text-muted text-center">Receipts recorded this session will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { api } from "./api.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt } from "./utils.js";
+
+  markActiveNav();
+  initNavToggle();
+
+  const form        = document.getElementById("receipt-form");
+  const productSel  = document.getElementById("product");
+  const qtyEl       = document.getElementById("quantity");
+  const noteEl      = document.getElementById("note");
+  const alertEl     = document.getElementById("form-alert");
+  const submitBtn   = document.getElementById("submit-btn");
+  const previewWrap = document.getElementById("stock-preview-wrap");
+  const previewEl   = document.getElementById("stock-preview");
+  const recentList  = document.getElementById("recent-list");
+
+  let receipts = [];
+
+  // ── Load products into select ──
+  (async () => {
+    try {
+      const products = await api.getProducts();
+      populateProductSelect(productSel, products);
+    } catch (e) {
+      productSel.innerHTML = `<option value="">⚠️ Failed to load — is the server running?</option>`;
+    }
+  })();
+
+  // ── Show current stock when product is selected ──
+  productSel.addEventListener("change", () => {
+    const opt = productSel.selectedOptions[0];
+    if (!opt || !opt.value) { previewWrap.style.display = "none"; return; }
+    const stock = parseInt(opt.dataset.stock, 10);
+    const uom   = opt.dataset.uom;
+    previewWrap.style.display = "block";
+    previewEl.innerHTML = `<span>📊</span><span>Current stock: <strong>${stock} ${uom}</strong></span>`;
+  });
+
+  // ── Submit ──
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    hideAlert(alertEl);
+
+    const ok1 = validateRequired(productSel, document.getElementById("product-err"));
+    const ok2 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
+    if (!ok1 || !ok2) return;
+
+    setLoading(submitBtn, true);
+    try {
+      const productId = parseInt(productSel.value, 10);
+      const quantity  = parseInt(qtyEl.value, 10);
+      const note      = noteEl.value.trim();
+
+      const move = await api.receipt({ product_id: productId, quantity, note });
+
+      // Update recent list
+      const productName = productSel.selectedOptions[0].textContent.split("(")[0].trim();
+      receipts.unshift({ productName, quantity, note, id: move.id });
+      renderRecent();
+
+      showToast(`✅ Received ${quantity} units for ${productName}`, "success");
+      form.reset();
+      previewWrap.style.display = "none";
+
+      // Refresh product options with updated stock
+      const products = await api.getProducts();
+      populateProductSelect(productSel, products);
+    } catch (err) {
+      showAlert(alertEl, err.message, "error");
+    } finally {
+      setLoading(submitBtn, false);
+    }
+  });
+
+  function renderRecent() {
+    if (!receipts.length) return;
+    recentList.innerHTML = receipts.slice(0, 5).map(r => `
+      <div class="low-stock-item" style="border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.04)">
+        <div>
+          <div class="low-stock-name">${r.productName}</div>
+          <div class="low-stock-sku">${r.note || "No note"}</div>
+        </div>
+        <span class="badge badge-green">+${r.quantity}</span>
+      </div>`).join("");
+  }
+</script>
+</body>
+</html>

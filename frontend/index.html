@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockSense — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* ── Extra dashboard-only styles ── */
+    .pulse-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+      margin-right: .4rem;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
+      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+
+    .welcome-banner {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 1.75rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+      box-shadow: var(--shadow-md);
+    }
+    .welcome-banner h2 { font-size: 1.5rem; margin-bottom: .3rem; color: white; }
+    .welcome-banner p  { color: rgba(255,255,255,.8); font-size: .93rem; }
+    .welcome-banner .banner-icon { font-size: 3.5rem; line-height: 1; }
+
+    .refresh-time { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <div class="logo-icon">📦</div>
+        <span>Stock<em>Sense</em></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html">🏠 Dashboard</a></li>
+        <li><a href="products.html">📋 Products</a></li>
+        <li><a href="receipt.html">📥 Receipt</a></li>
+        <li><a href="delivery.html">📤 Delivery</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <main class="content">
+
+    <!-- Welcome banner -->
+    <div class="welcome-banner">
+      <div>
+        <h2>Welcome to StockSense 👋</h2>
+        <p>Your intelligent inventory management hub — powered by an append-only ledger.</p>
+        <p class="refresh-time" id="last-refresh"></p>
+      </div>
+      <div class="banner-icon">📊</div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon blue"><span>📋</span></div>
+        <div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Total Products</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red"><span>🚨</span></div>
+        <div>
+          <div class="stat-value" id="stat-low">—</div>
+          <div class="stat-label">Low Stock Items</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><span>📥</span></div>
+        <div>
+          <div class="stat-value"><a href="receipt.html" style="color:var(--text);text-decoration:none;font-size:1rem">Receive →</a></div>
+          <div class="stat-label">Record a Receipt</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange"><span>📤</span></div>
+        <div>
+          <div class="stat-value"><a href="delivery.html" style="color:var(--text);text-decoration:none;font-size:1rem">Ship →</a></div>
+          <div class="stat-label">Record a Delivery</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low-stock section -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <span class="pulse-dot" id="pulse-dot" style="display:none"></span>
+          🚨 Low-Stock Alerts
+          <span style="margin-left:auto">
+            <button class="btn btn-outline" style="padding:.3rem .75rem;font-size:.82rem" onclick="loadDashboard()">🔄</button>
+          </span>
+        </div>
+        <div id="low-stock-content">
+          <div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading…</p></div>
+        </div>
+      </div>
+
+      <!-- All products quick view -->
+      <div class="card">
+        <div class="card-title">📦 All Products — Stock Snapshot</div>
+        <div id="all-products-content">
+          <div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading…</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="card mt-3">
+      <div class="card-title">⚡ Quick Actions</div>
+      <div class="flex flex-wrap gap-2">
+        <a href="products.html" class="btn btn-primary">➕ Add Product</a>
+        <a href="receipt.html"  class="btn btn-success">📥 New Receipt</a>
+        <a href="delivery.html" class="btn btn-danger">📤 New Delivery</a>
+        <a href="/api/docs" target="_blank" class="btn btn-outline">🔧 API Docs</a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { api } from "./api.js";
+  import { showToast, markActiveNav, initNavToggle, stockBadge } from "./utils.js";
+
+  markActiveNav();
+  initNavToggle();
+
+  window.loadDashboard = async function () {
+    try {
+      const [dash, products] = await Promise.all([api.getDashboard(), api.getProducts()]);
+
+      // Stats
+      document.getElementById("stat-total").textContent = dash.total_products;
+      document.getElementById("stat-low").textContent   = dash.low_stock_items.length;
+      document.getElementById("last-refresh").textContent =
+        `Last refreshed: ${new Date().toLocaleTimeString()}`;
+
+      // Pulse dot
+      const dot = document.getElementById("pulse-dot");
+      dot.style.display = dash.low_stock_items.length ? "inline-block" : "none";
+
+      // Low-stock list
+      const lsEl = document.getElementById("low-stock-content");
+      if (!dash.low_stock_items.length) {
+        lsEl.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">🟢</div>
+          <h3>All Good!</h3>
+          <p>No products below the ${dash.low_stock_threshold}-unit threshold.</p>
+        </div>`;
+      } else {
+        lsEl.innerHTML = `<ul class="low-stock-list">
+          ${dash.low_stock_items.map(item => {
+            const cls = item.current_stock === 0 ? "critical" : "low";
+            const badge = item.current_stock === 0
+              ? `<span class="badge badge-red">🚨 Out of Stock</span>`
+              : `<span class="badge badge-orange">⚠️ ${item.current_stock} left</span>`;
+            return `<li class="low-stock-item ${cls}">
+              <div>
+                <div class="low-stock-name">${item.name}</div>
+                <div class="low-stock-sku">SKU: ${item.sku} · ${item.unit_of_measure}</div>
+              </div>
+              ${badge}
+            </li>`;
+          }).join("")}
+        </ul>
+        <p class="text-muted mt-2" style="font-size:.82rem">Threshold: &lt; ${dash.low_stock_threshold} units</p>`;
+      }
+
+      // All products snapshot
+      const apEl = document.getElementById("all-products-content");
+      if (!products.length) {
+        apEl.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">📋</div>
+          <h3>No products yet</h3>
+          <p><a href="products.html" style="color:var(--accent)">Add your first product →</a></p>
+        </div>`;
+      } else {
+        apEl.innerHTML = `<div class="table-wrapper">
+          <table>
+            <thead><tr><th>Product</th><th>SKU</th><th>Stock</th></tr></thead>
+            <tbody>${products.map(p => `
+              <tr>
+                <td><strong>${p.name}</strong><br><small class="text-muted">${p.category}</small></td>
+                <td><code style="background:#F3F4FF;padding:.15rem .4rem;border-radius:4px;font-size:.8rem">${p.sku}</code></td>
+                <td>${stockBadge(p.current_stock)}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+      }
+
+    } catch (e) {
+      showToast("⚠️ Could not load dashboard — is the server running?", "error");
+      document.getElementById("low-stock-content").innerHTML = `<div class="alert alert-error"><span>🚫</span><span>${e.message}</span></div>`;
+    }
+  };
+
+  loadDashboard();
+
+  // Auto-refresh every 30 seconds
+  setInterval(loadDashboard, 30_000);
+</script>
+</body>
+</html>

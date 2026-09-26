@@ -1,0 +1,29 @@
+# ── Database & Storage ─────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+*.mv.db
+*.trace.db
+data/
+
+# ── Java / Maven ───────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+
+# ── IDE / OS ────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── Python / Venv (legacy / backup) ─────────────────────────
+venv/
+.venv/
+__pycache__/
+*.pyc

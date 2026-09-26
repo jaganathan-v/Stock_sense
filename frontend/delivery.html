@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockSense — Delivery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <div class="logo-icon">📦</div>
+        <span>Stock<em>Sense</em></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html">🏠 Dashboard</a></li>
+        <li><a href="products.html">📋 Products</a></li>
+        <li><a href="receipt.html">📥 Receipt</a></li>
+        <li><a href="delivery.html">📤 Delivery</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <main class="content">
+    <div class="page-header">
+      <div class="header-icon">📤</div>
+      <div>
+        <h1>Stock Delivery</h1>
+        <p>Record goods leaving the warehouse. Deliveries are validated against available stock before being committed.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- Form -->
+      <div class="card">
+        <div class="card-title">🚚 New Delivery</div>
+        <div id="form-alert" class="alert hidden"></div>
+
+        <form id="delivery-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="product">Product *</label>
+              <select id="product">
+                <option value="">— Loading products… —</option>
+              </select>
+              <span class="field-error" id="product-err"></span>
+            </div>
+
+            <!-- Live stock gauge -->
+            <div class="form-group full" id="stock-preview-wrap" style="display:none">
+              <div id="stock-bar-container" style="margin-bottom:.5rem">
+                <div class="flex items-center justify-between" style="margin-bottom:.3rem">
+                  <span id="stock-label" style="font-size:.87rem;font-weight:600"></span>
+                  <span id="stock-value" class="badge badge-blue"></span>
+                </div>
+                <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden">
+                  <div id="stock-bar" style="height:100%;border-radius:99px;background:var(--accent);transition:width .4s ease;width:0%"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group full">
+              <label for="quantity">Quantity to Ship *</label>
+              <input type="number" id="quantity" min="1" step="1" placeholder="e.g. 20" />
+              <span class="field-error" id="qty-err"></span>
+            </div>
+
+            <!-- Live remaining preview -->
+            <div class="form-group full" id="remaining-wrap" style="display:none">
+              <div class="alert" id="remaining-alert" style="margin:0"></div>
+            </div>
+
+            <div class="form-group full">
+              <label for="note">Note (optional)</label>
+              <input type="text" id="note" placeholder="e.g. Order #5532, Customer B" maxlength="255" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-danger mt-3 w-full" id="submit-btn">
+            📤 Record Delivery
+          </button>
+        </form>
+      </div>
+
+      <!-- Side panel -->
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="card">
+          <div class="card-title">🛡️ Stock Validation</div>
+          <p>The backend will <strong>reject</strong> any delivery where the requested quantity exceeds available stock. The check uses the live ledger sum — it's always accurate.</p>
+          <div class="alert alert-warn mt-2" style="margin-bottom:0">
+            <span>⚠️</span><span>You'll see a clear error message with the exact available and requested quantities if there's a shortfall.</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📤 Recent Deliveries</div>
+          <div id="recent-list">
+            <p class="text-muted text-center">Deliveries recorded this session will appear here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { api } from "./api.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, populateProductSelect, validateRequired, validatePositiveInt } from "./utils.js";
+
+  markActiveNav();
+  initNavToggle();
+
+  const form          = document.getElementById("delivery-form");
+  const productSel    = document.getElementById("product");
+  const qtyEl         = document.getElementById("quantity");
+  const noteEl        = document.getElementById("note");
+  const alertEl       = document.getElementById("form-alert");
+  const submitBtn     = document.getElementById("submit-btn");
+  const previewWrap   = document.getElementById("stock-preview-wrap");
+  const stockLabel    = document.getElementById("stock-label");
+  const stockValue    = document.getElementById("stock-value");
+  const stockBar      = document.getElementById("stock-bar");
+  const remainingWrap = document.getElementById("remaining-wrap");
+  const remainingAlert= document.getElementById("remaining-alert");
+  const recentList    = document.getElementById("recent-list");
+
+  let products = [];
+  let deliveries = [];
+
+  // ── Load products ──
+  (async () => {
+    try {
+      products = await api.getProducts();
+      populateProductSelect(productSel, products);
+    } catch (e) {
+      productSel.innerHTML = `<option value="">⚠️ Failed to load — is the server running?</option>`;
+    }
+  })();
+
+  // ── Stock gauge on product change ──
+  productSel.addEventListener("change", updateGauge);
+  qtyEl.addEventListener("input", updateRemainingPreview);
+
+  function selectedProduct() {
+    const id = parseInt(productSel.value, 10);
+    return products.find(p => p.id === id);
+  }
+
+  function updateGauge() {
+    const p = selectedProduct();
+    if (!p) { previewWrap.style.display = "none"; remainingWrap.style.display = "none"; return; }
+
+    previewWrap.style.display = "block";
+    stockLabel.textContent = `Available: ${p.current_stock} ${p.unit_of_measure}`;
+    stockValue.textContent = p.current_stock;
+    stockValue.className = p.current_stock === 0 ? "badge badge-red"
+                         : p.current_stock < 10  ? "badge badge-orange"
+                                                  : "badge badge-green";
+    // bar width capped at 100 for visual purposes (max reference = 200)
+    const pct = Math.min((p.current_stock / 200) * 100, 100);
+    stockBar.style.width = `${pct}%`;
+    stockBar.style.background = p.current_stock === 0 ? "var(--danger)"
+                               : p.current_stock < 10  ? "var(--warning)"
+                                                        : "var(--success)";
+    updateRemainingPreview();
+  }
+
+  function updateRemainingPreview() {
+    const p   = selectedProduct();
+    const qty = parseInt(qtyEl.value, 10);
+    if (!p || isNaN(qty) || qty <= 0) { remainingWrap.style.display = "none"; return; }
+
+    remainingWrap.style.display = "block";
+    const remaining = p.current_stock - qty;
+    if (remaining < 0) {
+      remainingAlert.className = "alert alert-error";
+      remainingAlert.innerHTML = `<span>🚫</span><span>Shortfall of <strong>${Math.abs(remaining)}</strong> ${p.unit_of_measure} — this delivery will be rejected.</span>`;
+    } else if (remaining < 10) {
+      remainingAlert.className = "alert alert-warn";
+      remainingAlert.innerHTML = `<span>⚠️</span><span>After delivery, stock will be <strong>${remaining} ${p.unit_of_measure}</strong> — below the low-stock threshold.</span>`;
+    } else {
+      remainingAlert.className = "alert alert-success";
+      remainingAlert.innerHTML = `<span>✅</span><span>Sufficient stock. After delivery: <strong>${remaining} ${p.unit_of_measure}</strong> remaining.</span>`;
+    }
+  }
+
+  // ── Submit ──
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    hideAlert(alertEl);
+
+    const ok1 = validateRequired(productSel, document.getElementById("product-err"));
+    const ok2 = validatePositiveInt(qtyEl, document.getElementById("qty-err"));
+    if (!ok1 || !ok2) return;
+
+    setLoading(submitBtn, true);
+    try {
+      const productId = parseInt(productSel.value, 10);
+      const quantity  = parseInt(qtyEl.value, 10);
+      const note      = noteEl.value.trim();
+
+      const move = await api.delivery({ product_id: productId, quantity, note });
+
+      const productName = productSel.selectedOptions[0].textContent.split("(")[0].trim();
+      deliveries.unshift({ productName, quantity, note, id: move.id });
+      renderRecent();
+
+      showToast(`📤 Shipped ${quantity} units of ${productName}`, "success");
+      form.reset();
+      previewWrap.style.display = "none";
+      remainingWrap.style.display = "none";
+
+      // Refresh stock levels
+      products = await api.getProducts();
+      populateProductSelect(productSel, products);
+    } catch (err) {
+      // Backend gives a clear insufficient-stock message — show it prominently
+      showAlert(alertEl, err.message, "error");
+    } finally {
+      setLoading(submitBtn, false);
+    }
+  });
+
+  function renderRecent() {
+    if (!deliveries.length) return;
+    recentList.innerHTML = deliveries.slice(0, 5).map(d => `
+      <div class="low-stock-item" style="border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)">
+        <div>
+          <div class="low-stock-name">${d.productName}</div>
+          <div class="low-stock-sku">${d.note || "No note"}</div>
+        </div>
+        <span class="badge badge-red">−${d.quantity}</span>
+      </div>`).join("");
+  }
+</script>
+</body>
+</html>

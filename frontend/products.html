@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StockSense — Products</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a class="nav-brand" href="index.html">
+        <div class="logo-icon">📦</div>
+        <span>Stock<em>Sense</em></span>
+      </a>
+      <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html">🏠 Dashboard</a></li>
+        <li><a href="products.html">📋 Products</a></li>
+        <li><a href="receipt.html">📥 Receipt</a></li>
+        <li><a href="delivery.html">📤 Delivery</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── Content ── -->
+  <main class="content">
+    <div class="page-header">
+      <div class="header-icon">📋</div>
+      <div>
+        <h1>Products</h1>
+        <p>Manage your product catalogue. Stock levels are computed from the transaction ledger.</p>
+      </div>
+    </div>
+
+    <!-- Add Product Form -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">➕ Add New Product</div>
+        <div id="form-alert" class="alert hidden"></div>
+
+        <form id="product-form" novalidate>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="name">Product Name *</label>
+              <input type="text" id="name" placeholder="e.g. Wireless Mouse" />
+              <span class="field-error" id="name-err"></span>
+            </div>
+            <div class="form-group">
+              <label for="sku">SKU *</label>
+              <input type="text" id="sku" placeholder="e.g. WM-001" />
+              <span class="field-error" id="sku-err"></span>
+            </div>
+            <div class="form-group">
+              <label for="category">Category</label>
+              <input type="text" id="category" placeholder="e.g. Electronics" value="General" />
+            </div>
+            <div class="form-group">
+              <label for="uom">Unit of Measure</label>
+              <select id="uom">
+                <option value="units">units</option>
+                <option value="pcs">pcs</option>
+                <option value="kg">kg</option>
+                <option value="litres">litres</option>
+                <option value="boxes">boxes</option>
+                <option value="pairs">pairs</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary mt-3" id="submit-btn">
+            ✅ Add Product
+          </button>
+        </form>
+      </div>
+
+      <!-- Quick Info -->
+      <div class="card" style="align-self:start;">
+        <div class="card-title">💡 How Stock Works</div>
+        <p style="margin-bottom:.8rem;">StockSense uses an <strong>append-only ledger</strong>. Every receipt or delivery creates a transaction row — the current stock is always <em>computed</em> by summing these rows, never stored directly.</p>
+        <div class="alert alert-info" style="margin-bottom:0">
+          <span>ℹ️</span>
+          <span>After adding a product, go to <a href="receipt.html" style="color:var(--accent-dark);font-weight:600">Receipt</a> to add initial stock.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="card mt-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="card-title" style="margin-bottom:0">📦 All Products</div>
+        <button class="btn btn-outline" id="refresh-btn" onclick="loadProducts()">🔄 Refresh</button>
+      </div>
+
+      <div id="table-container">
+        <div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading products…</p></div>
+      </div>
+    </div>
+  </main>
+
+  <footer><p>StockSense &copy; 2026 — Hackathon Edition &nbsp;|&nbsp; Powered by <a href="/api/docs" target="_blank">FastAPI</a></p></footer>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script type="module">
+  import { api } from "./api.js";
+  import { showToast, showAlert, hideAlert, setLoading, markActiveNav, initNavToggle, stockBadge, validateRequired } from "./utils.js";
+
+  markActiveNav();
+  initNavToggle();
+
+  const form       = document.getElementById("product-form");
+  const alert      = document.getElementById("form-alert");
+  const submitBtn  = document.getElementById("submit-btn");
+  const tableEl    = document.getElementById("table-container");
+
+  // ── Load Products ──
+  window.loadProducts = async function () {
+    tableEl.innerHTML = `<div class="empty-state"><div class="spinner"></div><p class="mt-1">Loading…</p></div>`;
+    try {
+      const products = await api.getProducts();
+      if (!products.length) {
+        tableEl.innerHTML = `<div class="empty-state">
+          <div class="empty-icon">🗂️</div>
+          <h3>No products yet</h3>
+          <p>Add your first product using the form above.</p>
+        </div>`;
+        return;
+      }
+
+      tableEl.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th><th>Name</th><th>SKU</th><th>Category</th>
+                <th>UOM</th><th>Current Stock</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>`;
+
+      const tbody = document.getElementById("tbody");
+      products.forEach((p, i) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="text-muted">${i + 1}</td>
+          <td><strong>${p.name}</strong></td>
+          <td><code style="background:#F3F4FF;padding:.15rem .4rem;border-radius:4px;font-size:.83rem">${p.sku}</code></td>
+          <td>${p.category}</td>
+          <td>${p.unit_of_measure}</td>
+          <td>${stockBadge(p.current_stock)}</td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      tableEl.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>Could not load products</h3>
+        <p>${e.message}</p>
+      </div>`;
+    }
+  };
+
+  loadProducts();
+
+  // ── Submit Form ──
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    hideAlert(alert);
+
+    const nameEl = document.getElementById("name");
+    const skuEl  = document.getElementById("sku");
+    const catEl  = document.getElementById("category");
+    const uomEl  = document.getElementById("uom");
+
+    const ok1 = validateRequired(nameEl, document.getElementById("name-err"));
+    const ok2 = validateRequired(skuEl,  document.getElementById("sku-err"));
+    if (!ok1 || !ok2) return;
+
+    setLoading(submitBtn, true);
+    try {
+      await api.createProduct({
+        name:            nameEl.value.trim(),
+        sku:             skuEl.value.trim(),
+        category:        catEl.value.trim() || "General",
+        unit_of_measure: uomEl.value,
+      });
+      showToast("Product added successfully!", "success");
+      form.reset();
+      catEl.value = "General";
+      loadProducts();
+    } catch (err) {
+      showAlert(alert, err.message, "error");
+    } finally {
+      setLoading(submitBtn, false);
+    }
+  });
+</script>
+</body>
+</html>
