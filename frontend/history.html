@@ -194,8 +194,9 @@
       const pName = (m.product_name || "").toLowerCase();
       const pSku  = (m.product_sku || "").toLowerCase();
       const loc   = (m.location_name || "").toLowerCase();
+      const supp  = (m.supplier_name || "").toLowerCase();
       const note  = (m.note || "").toLowerCase();
-      return pName.includes(q) || pSku.includes(q) || loc.includes(q) || note.includes(q);
+      return pName.includes(q) || pSku.includes(q) || loc.includes(q) || supp.includes(q) || note.includes(q);
     });
   }
 
@@ -225,6 +226,7 @@
               <th>Product</th>
               <th style="width:130px">Move Type</th>
               <th style="width:150px">Location</th>
+              <th style="width:150px">Supplier / Partner</th>
               <th style="width:140px;text-align:right">Change</th>
               <th>Note</th>
             </tr>
@@ -236,6 +238,9 @@
               const qtyClass = isPositive ? "qty-positive" : "qty-negative";
               const qtyIcon = isPositive ? "arrow-down-left" : "arrow-up-right";
               const uom = m.unit_of_measure ? ` ${m.unit_of_measure}` : "";
+              const supplierDisplay = m.supplier_name
+                ? `<span style="font-size:.85rem;color:var(--text);font-weight:500"><i data-lucide="truck" class="badge-icon" style="color:var(--accent);margin-right:3px"></i>${m.supplier_name}</span>`
+                : `<span class="text-muted" style="font-size:.82rem">—</span>`;
               return `
                 <tr>
                   <td><code style="color:var(--muted);font-size:.8rem">#${m.id}</code></td>
@@ -260,6 +265,7 @@
                       ${m.location_name || "Main Warehouse"}
                     </span>
                   </td>
+                  <td>${supplierDisplay}</td>
                   <td style="text-align:right">
                     <span class="${qtyClass}">
                       <i data-lucide="${qtyIcon}" class="badge-icon"></i>
